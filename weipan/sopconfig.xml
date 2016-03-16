@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sopconfig syberos:versionCode="1" xmlns:syberos="http://schemas.syberos.com/sop/res/syberos/v1" syberos:shareUserId="" syberos:sopid="com.mycompany.weiPan" syberos:versionName="1.0.0">
+    <uses-permission syberos:name="syberos.permission.ACCESS_STORAGE"/>
+    <uses-permission syberos:name="syberos.permission.ACCESS_WIFI"/>
+    <uses-sdk syberos:minSdkVersion="" syberos:targetSdkVersion=""/>
+    <application syberos:description="Brief introduction of your application here. " syberos:name="WeiPan" syberos:debuggable="true" syberos:icon="res/64x64.png">
+        <uiapp syberos:id="MyApp" syberos:splash="" syberos:exec="bin/MyApp" syberos:launcher="true" syberos:name="" syberos:background="" syberos:icon="res/64x64.png"/>
+    </application>
+</sopconfig>

@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/MainPage.qml</file>
+        <file>qml/Upload.qml</file>
+        <file>qml/UserInfo.qml</file>
+        <file>qml/InputDialog.qml</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>res/MyApp.png</file>
+        <file>res/folder.png</file>
+        <file>res/3document.png</file>
+    </qresource>
+</RCC>
