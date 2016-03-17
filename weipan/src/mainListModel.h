@@ -22,9 +22,11 @@ public:
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;	//用于在qml显示的内容
     Q_INVOKABLE QUrl getcurrentPath() const;					//得到当前路径
     Q_INVOKABLE QString getPath(int index) const;
+    Q_INVOKABLE QString getTitle(int index) const;
     Q_INVOKABLE bool getType(int index) const;
     Q_INVOKABLE void remove(int first, int last);				//删除
     Q_INVOKABLE void rename(QString name);
+    Q_INVOKABLE void refresh();
 
     void setCurrentIndex(const int & i);
 

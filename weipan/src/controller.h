@@ -54,6 +54,8 @@ public:
     //写入配置文件
     void writeCfg();
 
+    Q_INVOKABLE QString readFile(QString path);
+
     Q_INVOKABLE void getUserInfo();
     //构建 UserInfo request url
     QString builtGetUsrInfoReqUrl();
@@ -72,7 +74,7 @@ public:
     //提取文件夹信息
     void procMetaData(const QByteArray &buf);
 
-    Q_INVOKABLE void reqUploadFile();
+    Q_INVOKABLE void reqUploadFile(QString toPath);
 
     void buildMultiPart(QByteArray &data);
 
@@ -88,7 +90,7 @@ public:
 
     QString buildDownFileUrl(QString &fromPath);
 
-    Q_INVOKABLE void createFolder(QString folderName);
+    Q_INVOKABLE void createFolder(QString folderName, QString path);
 
     QString buildCreateFolderUrl();
 
@@ -115,7 +117,7 @@ public slots:
     void dwnFileRealReadReady();
     void downLoadFileReplyFinished();
 
-    void creatflderReplyFinished(QNetworkReply* reply);
+    void creatflderReplyFinished();
 
 private:
 

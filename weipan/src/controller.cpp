@@ -8,6 +8,7 @@
 #include <QHttpPart>
 #include <QFileInfo>
 #include <QIODevice>
+#include <QTextStream>
 
 Controller::Controller()
 {
@@ -101,14 +102,33 @@ int Controller::openFile(QByteArray &buf, const QString &filePath)
 //    cfgReader->setValue("OAuthInfo/uploadNode","NULL");
 //}
 
+QString Controller::readFile(QString path)
+{
+    QFile file("/home/user" + path);
+
+    qDebug() << Q_FUNC_INFO << "path==" << "/home/user" << path;
+    if(!file.open(QIODevice::ReadOnly)) {
+        qDebug()<<"Can't open the file!";
+        return NULL;
+    }
+    while(!file.atEnd()) {
+        QByteArray line = file.readLine();
+        QString str(line);
+        qDebug()<< Q_FUNC_INFO<<str;
+        return str;
+    }
+    file.close();
+}
+
 
 //userInfo request
 void Controller::getUserInfo()
 {
     QString reqUrl = builtGetUsrInfoReqUrl();
     inputUrl.setUrl(reqUrl.toLatin1());
-    mRequest.setUrl(inputUrl);
-    mUsrInfoReply =  mManager->get(mRequest);
+    QNetworkRequest request;
+    request.setUrl(inputUrl);
+    mUsrInfoReply =  mManager->get(request);
     connect(mUsrInfoReply, SIGNAL(finished()), this, SLOT(getUserInfoFinished()));
 
 }
@@ -201,7 +221,7 @@ QString Controller::showUserInfo(int index)
 }
 
 //----------------创建文件夹------------------
-void Controller::createFolder(QString folderName)
+void Controller::createFolder(QString folderName, QString fpath)
 {
     if(folderName == "") {
         return;
@@ -212,18 +232,17 @@ void Controller::createFolder(QString folderName)
         qDebug() << "createFolderUrl = " << inputUrl;
         qDebug() << "folderName = " << folderName;
 
-        QByteArray append("root=sandbox&path=/123456/"+folderName.toLocal8Bit());
+        QByteArray append("root=sandbox&path="+fpath.toLocal8Bit()+"/"+folderName.toLocal8Bit());
         qDebug() << Q_FUNC_INFO << "append = " << append;
 
-        mRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
-        mRequest.setHeader(QNetworkRequest::ContentLengthHeader, QVariant(append.size()).toString());
-        mRequest.setUrl(inputUrl);
+        QNetworkRequest request;
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+        request.setHeader(QNetworkRequest::ContentLengthHeader, QVariant(append.size()).toString());
+        request.setUrl(inputUrl);
 
-        connect(mManager, SIGNAL(finished(QNetworkReply*)), this, SLOT(creatflderReplyFinished(QNetworkReply*)));
-
-
-        mCreatFlderReply = mManager->post(mRequest, append);
+        mCreatFlderReply = mManager->post(request, append);
         qDebug() << Q_FUNC_INFO << "mCreatFlderReply = " << mCreatFlderReply;
+        connect(mCreatFlderReply, SIGNAL(finished()), this, SLOT(creatflderReplyFinished()));
         connect(mCreatFlderReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
     }
 }
@@ -243,12 +262,12 @@ QString Controller::buildCreateFolderUrl()
 }
 
 //build CreateFolder Url Finished
-void Controller::creatflderReplyFinished(QNetworkReply* reply)
+void Controller::creatflderReplyFinished()
 {
-    int ret = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    int ret = mCreatFlderReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     qDebug() << "ret = " << ret;
     if(ret == 200) {
-    QByteArray buf = reply->readAll();
+    QByteArray buf = mCreatFlderReply->readAll();
     qDebug() << Q_FUNC_INFO << "buf = " << buf;
     procFolder(buf);
     mCreatFlderReply->deleteLater();
@@ -312,9 +331,15 @@ void Controller::reqMetaData(QString dataPath)
     inputUrl.setUrl(QString(metaDataUrl.toUtf8()));
     qDebug() << "metaData = " << metaDataUrl.toUtf8();
     qDebug() << "inpurtUrl = " << inputUrl << " after encoded: " << inputUrl.toEncoded();
-    mRequest.setUrl(QString(inputUrl.toEncoded()));
-    mMetaDataReply = mManager->get(mRequest);
+
+    QNetworkRequest request;
+    request.setUrl(QString(inputUrl.toEncoded()));
+    mMetaDataReply = mManager->get(request);
+
+//    mRequest.setUrl(QString(inputUrl.toEncoded()));
+//    mMetaDataReply = mManager->get(mRequest);
     connect(mMetaDataReply, SIGNAL(finished()),this,SLOT(metaDataReplyFinished()));
+    connect(mMetaDataReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
 }
 
 //构造获取文件夹信息url
@@ -341,6 +366,7 @@ QString Controller::buildMetaDataUrl(QString &dataPath)
 void Controller::metaDataReplyFinished()
 {
     int ret = mMetaDataReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    qDebug() << Q_FUNC_INFO<<"ret===" << ret;
     if(ret == 200) {
         QByteArray getBuf = mMetaDataReply->readAll();
         qDebug() << Q_FUNC_INFO << "buf = " << getBuf;
@@ -373,6 +399,8 @@ void Controller::procMetaData(const QByteArray &buf)
 
                 if(jsonArray.size() == 0) {
                     qDebug() << "==============size==00000000000000======";
+                    mInfolist.clear();
+                    emit(result(mInfolist));
                     emit(emptyFile());
                 } else {
                     foreach (const QJsonValue & value, jsonArray) {
@@ -400,10 +428,9 @@ void Controller::procMetaData(const QByteArray &buf)
     }
 }
 
-void Controller::reqUploadFile()
+void Controller::reqUploadFile(QString toPath)
 {
     QByteArray data;
-    QString toPath = "/";
     QString uploadFileUrl = buildUploadFileUrl(toPath);
 
     inputUrl.setUrl(uploadFileUrl.toUtf8());
@@ -429,8 +456,7 @@ QString Controller::buildUploadFileUrl(QString &toPath)
 {
     QString para;
     QString _sendFileUrl = UPLOAD_URL;
-    _sendFileUrl.append("/123456/"+mULFileName);  //file save path
-    _sendFileUrl.append(toPath);
+    _sendFileUrl.append( toPath + "/" + mULFileName);  //file save path
     _sendFileUrl.append("?");
     _sendFileUrl.append(ACCESS_TOKEN);
     _sendFileUrl.append(mAccessToken);
@@ -449,6 +475,7 @@ QString Controller::getRandNonce()
 void Controller::getUploadFilePath(QString path)
 {
     mFilePath = path;
+    qDebug() << "mFilePath===" << mFilePath;
     QFileInfo fi(mFilePath);
     mULFileName = fi.fileName();
 }
@@ -571,7 +598,7 @@ void Controller::reqDownLoadFile()
 void Controller::getDwnloadPath(QString path)
 {
     mDownloadpath = path;
-    qDebug()<< Q_FUNC_INFO << "====path==="<<mDownloadpath;
+    qDebug()<< Q_FUNC_INFO << "====path==="<< mDownloadpath;
 }
 
 //构造 下载文件的url

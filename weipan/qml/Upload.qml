@@ -6,6 +6,7 @@ import com.syberos.filemanager.filepicker 1.0
 CPage {
     id: mainpg_pg
 
+    property string c_path: ""
     property string webHtml: ""
     property var errorAddress: []
     property int allAttachSize: 0
@@ -80,7 +81,7 @@ CPage {
             height: 100
             text: "upload"
             onClicked: {
-                contrl.reqUploadFile()
+                contrl.reqUploadFile(c_path)
                 indicator.visible = true;
             }
         }

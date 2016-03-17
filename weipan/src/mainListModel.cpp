@@ -70,6 +70,19 @@ QString MainListModel::getPath(int index) const
 
 }
 
+QString MainListModel::getTitle(int index) const
+{
+    qDebug() << Q_FUNC_INFO << "====getTitle===row====" << index;
+    QString str;
+    if (index >= 0 && index < mInfolist.size()) {
+        str = mInfolist.at(index).getTitle();
+    }
+    qDebug() << Q_FUNC_INFO << "====getTitle===title====" << str;
+    return str;
+
+}
+
+
 bool MainListModel::getType(int index) const
 {
     qDebug() << Q_FUNC_INFO << "====getType===row====" << index;
@@ -80,6 +93,12 @@ bool MainListModel::getType(int index) const
     qDebug() << Q_FUNC_INFO << "====getType===Type====" << i;
     return i;
 
+}
+
+void MainListModel::refresh()
+{
+    beginResetModel();
+    endResetModel();
 }
 
 void MainListModel::remove(int first, int last)

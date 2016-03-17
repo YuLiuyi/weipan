@@ -43,6 +43,7 @@ CPageStackWindow {
                                 console.log("token has got");
                                 contrl.getAccessToken(s, s1);
                                 contrl.reqMetaData("");
+                                contrl.getUserInfo();
                                 scrollView.visible = false;
                                 main.visible = true;
                                 pageStack.push("qrc:///qml/MainPage.qml")

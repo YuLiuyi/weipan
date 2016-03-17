@@ -1,27 +1,27 @@
 import QtQuick 2.0
 import com.syberos.basewidgets 2.0
-import Qt.labs.folderlistmodel 1.0
 
 CPage {
-    id: mainpg_pg
+    id: showPage
 
-    property string c_path: ""
+    property string currentpath: ""
     property string baseDir: ""
     property date currentDate: new Date()
     property string c_name: ""
     property string c_date: ""
     property var rmIndexList: []
     property bool ismuliSelected: true
+    property string c_title: ""
+    property string c_path: ""
 
     onStatusChanged: {
-         console.log("main status==="+status);
+         console.log("status==="+status);
 
         if (status == CPageStatus.Show) {
-            console.log("[mainpg_pg] ")
-            contrl.reqMetaData("");
+            console.log("[show111page] c_path: ", c_path)
+            contrl.reqMetaData(c_path);
         }
     }
-
 
     contentAreaItem: Item {
 
@@ -40,11 +40,9 @@ CPage {
 
                 font.pixelSize: 40
                 font.bold: true
-                text: "首页"
+                text: c_title
             }
         }
-
-        //文件或者目录信息
 
         CEditTitleBar {
             id: editTitleBar
@@ -91,6 +89,7 @@ CPage {
                     return tab_btn.top
                 }
             }
+
             model: mainListModel
             clip: true
 
@@ -106,7 +105,6 @@ CPage {
                     mainListModel.currentIndex = index;
                     if(mainListModel.getType(index)) {
                         console.log("is wen jian jia==========currentPath===="+mainListModel.getPath(index))
-//                        contrl.reqMetaData(mainListModel.getPath(index));
                         var txt_title = mainListModel.getTitle(index)
                         var txt_path = mainListModel.getPath(index)
                         // enter the folder
@@ -284,21 +282,21 @@ CPage {
                            :qsTr("Sure to delete the selected ") + rmIndexList.length + qsTr(" file?")
             onAccepted:  {
                 console.log("RecordList.qml:onAccepted.")
-                view.editing = false
-                visible = false
-                if(!ismuliSelected) {
+//                view.editing = false
+//                visible = false
+//                if(!ismuliSelected) {
 //                    mainListModel.remove(currentpath)
-                    return;
-                } else {
-                    console.log("------------historyModel.getPath---------------------",mainListModel.getPath(rmIndexList[0]))
-                    for(var i = 0; i < rmIndexList.length; i++) {
-                        var index = rmIndexList[i];
-                        console.log("rmIndex index = "+ index +" path = " + mainListModel.getPath(rmIndexList[i]))
-                        mainListModel.remove(index, index)
-                    }
-                    //                    indicatorDialog.messageText = os.i18n.ctr(qsTr("Deleting..."))
-                    //                    indicatorDialog.show()
-                }
+//                    return;
+//                } else {
+//                    console.log("------------historyModel.getPath---------------------",mainListModel.getPath(rmIndexList[0]))
+//                    for(var i = 0; i < rmIndexList.length; i++) {
+//                        var index = rmIndexList[i];
+//                        console.log("rmIndex index = "+ index +" path = " + mainListModel.getPath(rmIndexList[i]))
+//                        mainListModel.remove(index, index)
+//                    }
+//                    //                    indicatorDialog.messageText = os.i18n.ctr(qsTr("Deleting..."))
+//                    //                    indicatorDialog.show()
+//                }
             }
         }
 
@@ -324,8 +322,8 @@ CPage {
 
             onEmptyFile: {
                 console.log("文件夹为空!");
-                mainListModel.refresh();
 //                gToast.requestToast("文件夹为空!");
+                mainListModel.refresh()
             }
 
             onDownloadFinished :{
@@ -340,7 +338,6 @@ CPage {
         CIndicatorDialog{
             id:indicatorDialog
         }
-
 
         Row {
             id: tab_btn
@@ -364,7 +361,7 @@ CPage {
                 height: 100
                 onClicked: {
                     console.log("upload")
-                    pageStack.push("qrc:///qml/Upload.qml")
+                    pageStack.push("qrc:///qml/Upload.qml",{c_path: c_path})
                 }
             }
             CButton {
@@ -408,6 +405,5 @@ CPage {
             anchors.fill: parent
             visible: false
         }
-
     }
 }
