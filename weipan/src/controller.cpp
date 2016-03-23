@@ -192,7 +192,6 @@ void Controller::procUsrInfo(struUsrInfo &usrInfo, const QByteArray &buf)
                 return;
             }
         }
-
     }
 }
 
@@ -269,7 +268,6 @@ void Controller::creatflderReplyFinished()
     if(ret == 200) {
     QByteArray buf = mCreatFlderReply->readAll();
     qDebug() << Q_FUNC_INFO << "buf = " << buf;
-    procFolder(buf);
     mCreatFlderReply->deleteLater();
     } else {
         qDebug() << Q_FUNC_INFO<<"error";
@@ -324,7 +322,9 @@ void Controller::procFolder(const QByteArray &buf)
 //获取文件夹信息
 void Controller::reqMetaData(QString dataPath)
 {
+//    listModel.clear(mInfolist);
     mInfolist.clear();
+    emit(result(mInfolist));
     qDebug()<<Q_FUNC_INFO<<"datapath ========== "<<dataPath;
     QString metaDataUrl = buildMetaDataUrl(dataPath);
 
@@ -370,15 +370,16 @@ void Controller::metaDataReplyFinished()
     if(ret == 200) {
         QByteArray getBuf = mMetaDataReply->readAll();
         qDebug() << Q_FUNC_INFO << "buf = " << getBuf;
-        procMetaData(getBuf);
+//        m_thread->setInfo(getBuf);
+//        m_thread->start();
+        proMetaData(getBuf);
         mMetaDataReply->deleteLater();
     } else {
         qDebug() << Q_FUNC_INFO<<"error";
     }
 }
 
-//提取文件夹信息
-void Controller::procMetaData(const QByteArray &buf)
+void Controller::proMetaData(const QByteArray &buf)
 {
     QJsonParseError jsonError;//Qt5新类
     QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);//Qt5新类
@@ -393,15 +394,15 @@ void Controller::procMetaData(const QByteArray &buf)
 
                 qDebug() << "======================contents:"<<obj.value("contents");
 
-                QJsonArray jsonArray = obj["contents"].toArray();
+                QJsonArray jsonArray = obj["contents"].toArray();//
 
                 qDebug() << "======================jsonArray:"<<jsonArray.size();
 
                 if(jsonArray.size() == 0) {
                     qDebug() << "==============size==00000000000000======";
                     mInfolist.clear();
-                    emit(result(mInfolist));
-                    emit(emptyFile());
+                    emit result(mInfolist);
+                    emit emptyFile();
                 } else {
                     foreach (const QJsonValue & value, jsonArray) {
                         QJsonObject obj = value.toObject();
@@ -412,15 +413,9 @@ void Controller::procMetaData(const QByteArray &buf)
                         qDebug() << "==============is_dir=======" << obj["is_dir"].toBool();
                         type = obj["is_dir"].toBool();
                         qDebug() << "======================type:"<<type;
-//                        if(type) {
-//                            QString size =  QString::number(jsonArray.size(), 10);
-//                        mInfolist.append(FileInfo(obj["path"].toString(), obj["modified"].toString(),
-//                                size, title, type));
-//                        } else {
-                            mInfolist.append(FileInfo(obj["path"].toString(), obj["modified"].toString(),
+                        mInfolist.append(FileInfo(obj["path"].toString(), obj["modified"].toString(),
                                     obj["size"].toString(), title, type));
-//                        }
-                        emit(result(mInfolist));
+                        emit result(mInfolist);
                     }
                 }
             }

@@ -6,7 +6,6 @@
 #include <QFileInfo>
 #include <QAbstractListModel>
 #include "filesInfo.h"
-#include "controller.h"
 
 class MainListModel : public QAbstractListModel
 {
@@ -26,7 +25,7 @@ public:
     Q_INVOKABLE bool getType(int index) const;
     Q_INVOKABLE void remove(int first, int last);				//删除
     Q_INVOKABLE void rename(QString name);
-    Q_INVOKABLE void refresh();
+    Q_INVOKABLE void clear();
 
     void setCurrentIndex(const int & i);
 

@@ -11,13 +11,7 @@
 #include <QDebug>
 #include "publicFun.h"
 #include "filesInfo.h"
-
-typedef struct _accessTokenJson
-{
-    QString accessToken;
-    QString usrID;
-    QString mUploadNode;
-}struAccessToken;
+#include "mainListModel.h"
 
 typedef struct _usrInfoJson
 {
@@ -71,8 +65,7 @@ public:
     //构造获取文件夹信息url
     QString buildMetaDataUrl(QString &dataPath);
 
-    //提取文件夹信息
-    void procMetaData(const QByteArray &buf);
+    void proMetaData(const QByteArray &buf);
 
     Q_INVOKABLE void reqUploadFile(QString toPath);
 
@@ -99,9 +92,9 @@ public:
 
 signals:
     void result(InfoList);
-    void emptyFile();
     void uploadFinished();
     void downloadFinished();
+    void emptyFile();
 
 public slots:
     void getUserInfoFinished();
@@ -137,7 +130,6 @@ private:
     QString               mULFileName;
     int                   mAuUrlChangeNum;
     bool                  mAuthoriseOk;
-    struAccessToken       mAccessTokenInfo;
     struUsrInfo           mUsrInfoStru;
     QByteArray            mDwnFileBuf;
     QFile                 *dwnFile;
@@ -145,6 +137,7 @@ private:
     QString               mUid;
     QString               mDownloadpath;
     InfoList              mInfolist;
+    MainListModel         listModel;
 };
 
 

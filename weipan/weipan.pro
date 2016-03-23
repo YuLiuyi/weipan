@@ -39,13 +39,15 @@ SOURCES += src/main.cpp \
     src/controller.cpp \
     src/publicFun.cpp \
     src/mainListModel.cpp \
-    src/filesInfo.cpp
+    src/filesInfo.cpp \
+    src/thread.cpp
 
 HEADERS += src/MyApp_Workspace.h \
     src/controller.h \
     src/publicFun.h \
     src/mainListModel.h \
-    src/filesInfo.h
+    src/filesInfo.h \
+    src/thread.h
 
 # Installation path
 target.path = $$INS_DIR/bin

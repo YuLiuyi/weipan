@@ -30,6 +30,7 @@ int MainListModel::rowCount(const QModelIndex & parent) const
 
 void MainListModel::handleList(InfoList filelist)
 {
+    qDebug() << Q_FUNC_INFO ;
     beginResetModel();
     mInfolist = filelist;
     endResetModel();
@@ -95,9 +96,10 @@ bool MainListModel::getType(int index) const
 
 }
 
-void MainListModel::refresh()
+void MainListModel::clear()
 {
     beginResetModel();
+    mInfolist.clear();
     endResetModel();
 }
 
@@ -167,5 +169,3 @@ QHash<int, QByteArray> MainListModel::roleNames() const
     role[typeRole] = "type";
     return role;
 }
-
-

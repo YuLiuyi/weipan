@@ -14,6 +14,8 @@ MyApp_Workspace::MyApp_Workspace()
 
     m_view->rootContext()->setContextProperty("contrl", &contrl);
     QObject::connect(&contrl,SIGNAL(result(InfoList)), mMainListModel, SLOT(handleList(InfoList)));
+//    m_view->rootContext()->setContextProperty("thread", &thread);
+//    QObject::connect(&thread, SIGNAL(procResult(InfoList)), mMainListModel, SLOT(handleList(InfoList)));
     m_view->setSource(QUrl("qrc:/qml/main.qml"));
     m_view->showFullScreen();
 }

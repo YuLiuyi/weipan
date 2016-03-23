@@ -8,6 +8,7 @@ CPage {
 
     property string c_path: ""
     property string webHtml: ""
+    property string filename: "no file"
     property var errorAddress: []
     property int allAttachSize: 0
     property int maxAttachSize: 1024*1024*10       //附件大小最大支持10M
@@ -43,32 +44,29 @@ CPage {
             }
         }
 
-        Row {
+        Column {
             id: upload_ctrl
+            width: parent.width
             anchors.top: rect.bottom
             anchors.topMargin: 400
-            anchors.horizontalCenter: parent.horizontalCenter
             spacing: 20
-            Text {
-                font.pixelSize: 30
-                text: "choose file:"
-                anchors.verticalCenter: cho_btn.verticalCenter
-            }
 
             CButton {
                 id: cho_btn
-                width: 160
-                height: 100
-                text: "..."
+                width: 200
+                height: 80
+                text: "选择上传文档"
+                anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
                     pageStack.push(filesPickerCom)
                 }
             }
 
             Text {
+                id: txt
                 font.pixelSize: 30
-                text: "no file"
-                anchors.verticalCenter: cho_btn.verticalCenter
+                text: filename
+                anchors.horizontalCenter: parent.horizontalCenter
             }
         }
 
@@ -79,7 +77,8 @@ CPage {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 200
             height: 100
-            text: "upload"
+            enabled: txt.text == "no file"?false:true
+            text: "上传"
             onClicked: {
                 contrl.reqUploadFile(c_path)
                 indicator.visible = true;
@@ -98,6 +97,7 @@ CPage {
                     }
 
                     var filePath = filesPicker.filesPath;
+                    mainpg_pg.filename = filePath;
                     console.log("filePicker filesPath = "+filePath)
                     contrl.getUploadFilePath(filePath);
                     window.clearFocus()

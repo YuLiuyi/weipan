@@ -10,6 +10,7 @@
 #include <cworkspace.h>
 #include "controller.h"
 #include "mainListModel.h"
+#include "thread.h"
 
 
 using namespace SYBEROS;
@@ -22,6 +23,7 @@ private:
     QQuickView *m_view;
     Controller contrl;
     MainListModel *mMainListModel;
+//    Thread thread;
 
 public:
     MyApp_Workspace();

@@ -18,6 +18,7 @@ CPage {
 
         if (status == CPageStatus.Show) {
             console.log("[mainpg_pg] ")
+            mainListModel.clear()
             contrl.reqMetaData("");
         }
     }

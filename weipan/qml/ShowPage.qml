@@ -19,6 +19,7 @@ CPage {
 
         if (status == CPageStatus.Show) {
             console.log("[show111page] c_path: ", c_path)
+            mainListModel.clear()
             contrl.reqMetaData(c_path);
         }
     }
