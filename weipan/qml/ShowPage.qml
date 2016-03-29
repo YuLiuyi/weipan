@@ -113,12 +113,16 @@ CPage {
 
                     }else if(!mainListModel.getType(index)) {
                         console.log("is jian jia")
-                        gToast.requestToast("为文件!");
+                        // if the file is not downloaded, need to download, then open the file.
+                        var txt1_path = mainListModel.getPath(index)
+                        var txt_title1 = mainListModel.getTitle(index)
+                        var txt_content = contrl.readFile("/home/user/"+txt_title1)
+                        contrl.getDwnloadPath(txt1_path)
+                        contrl.reqDownLoadFile()
+                        indicator.visible = true
                         // open the file
-//                        var txt_title = mainListModel.getTitle(index)
-//                        var txt_content = contrl.readFile(mainListModel.getPath(index))
-//                        console.log("title===" + txt_title + "  content===" + txt_content)
-//                        pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title},{text: txt_content})
+                        console.log("title===" + txt_title1 + "  content===" + txt_content)
+                        pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
 
                     }
                 }
@@ -323,8 +327,7 @@ CPage {
 
             onEmptyFile: {
                 console.log("文件夹为空!");
-//                gToast.requestToast("文件夹为空!");
-                mainListModel.refresh()
+                gToast.requestToast("文件夹为空!可新建文件夹，上传文档");
             }
 
             onDownloadFinished :{
@@ -346,15 +349,7 @@ CPage {
             height: 110
             anchors.bottom: parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
-            CButton {
-                id: userInfo_btn
-                text: "个人"
-                width: 180
-                height: 100
-                onClicked: {
-                    pageStack.push("qrc:///qml/UserInfo.qml")
-                }
-            }
+
             CButton {
                 id: upload_btn
                 text: "上传"

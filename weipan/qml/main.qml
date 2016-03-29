@@ -4,6 +4,7 @@ import QtQuick.Controls 1.2
 import Qt.labs.folderlistmodel 1.0
 import QtWebKit 3.0
 import QtWebKit.experimental 1.0
+import com.syberos.filemanager.filepicker 1.0
 
 
 CPageStackWindow {
@@ -22,6 +23,15 @@ CPageStackWindow {
         property var rmIndexList: []
         property bool ismuliSelected: true
         property bool flag: true
+
+        property string f_path: ""
+        property string webHtml: ""
+        property string filename: ""
+        property var errorAddress: []
+        property int allAttachSize: 0
+        property int maxAttachSize: 1024*1024*10       //附件大小最大支持10M
+        property var recipientsItem
+
 
         onStatusChanged: {
             console.log("main status==="+status);
@@ -103,6 +113,22 @@ CPageStackWindow {
                     width: parent.width
                     height: 60
                     color: "#7a6767"
+                    Image {
+                        id: usrInfo
+                        anchors.left: parent.left
+                        anchors.leftMargin: 40
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 50
+                        height: 50
+                        source: "qrc:/images/res/user_man_circle.png"
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                pageStack.push("qrc:///qml/UserInfo.qml")
+                            }
+                        }
+                    }
+
                     Text {
                         id: title_txt
                         color: "#5a3939"
@@ -187,12 +213,17 @@ CPageStackWindow {
 
                             }else if(!mainListModel.getType(index)) {
                                 console.log("is jian jia")
-                                gToast.requestToast("为文件!");
+
+                                // if the file is not downloaded, need to download, then open the file.
+                                var txt1_path = mainListModel.getPath(index)
+                                var txt_title1 = mainListModel.getTitle(index)
+                                var txt_content = contrl.readFile("/home/user/"+txt_title1)
+                                contrl.getDwnloadPath(txt1_path)
+                                contrl.reqDownLoadFile()
+                                indicator.visible = true
                                 // open the file
-                                //                        var txt_title = mainListModel.getTitle(index)
-                                //                        var txt_content = contrl.readFile(mainListModel.getPath(index))
-                                //                        console.log("title===" + txt_title + "  content===" + txt_content)
-                                //                        pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title},{text: txt_content})
+                                console.log("title===" + txt_title1 + "  content===" + txt_content)
+                                pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
 
                             }
                         }
@@ -401,7 +432,6 @@ CPageStackWindow {
 
                     onEmptyFile: {
                         console.log("文件夹为空!");
-                        mainListModel.refresh();
                         gToast.requestToast("文件夹为空!可新建文件夹，上传文档");
                     }
 
@@ -412,17 +442,12 @@ CPageStackWindow {
                         view.editing = false
                     }
 
+                    onUploadFinished :{
+                        console.log("upload finished!")
+                        indicator.visible = false;
+                        gToast.requestToast("上传完成！");
+                    }
                 }
-
-                //                Connections{
-                //                    target: thread
-
-                //                    onEmptyFile: {
-                //                        console.log("文件夹为空!");
-                //                        mainListModel.refresh();
-                //                        gToast.requestToast("文件夹为空!可新建文件夹，上传文档");
-                //                    }
-                //                }
 
 
                 CIndicatorDialog{
@@ -436,15 +461,7 @@ CPageStackWindow {
                     height: 110
                     anchors.bottom: parent.bottom
                     anchors.horizontalCenter: parent.horizontalCenter
-                    CButton {
-                        id: userInfo_btn
-                        text: "个人"
-                        width: 180
-                        height: 100
-                        onClicked: {
-                            pageStack.push("qrc:///qml/UserInfo.qml")
-                        }
-                    }
+
                     CButton {
                         id: upload_btn
                         text: "上传"
@@ -452,7 +469,8 @@ CPageStackWindow {
                         height: 100
                         onClicked: {
                             console.log("upload")
-                            pageStack.push("qrc:///qml/Upload.qml")
+                            //                            pageStack.push("qrc:///qml/Upload.qml")
+                            pageStack.push(filesPickerCom)
                         }
                     }
                     CButton {
@@ -465,6 +483,46 @@ CPageStackWindow {
                             fileName_Dlg.show();
                         }
                     }
+                }
+                Component{
+                    id: filesPickerCom
+                    SyberosFilesPicker{
+                        id: filesPicker
+                        onOk:{
+                            var size = 0;
+                            var selectedSize = filesPicker.getFileSize()
+                            for(var i = 0; i < selectedSize.length; i++){
+                                size += parseInt(selectedSize[i])
+                            }
+
+                            var filePath = filesPicker.filesPath;
+                            page.filename = filePath;
+                            console.log("filePicker filesPath = "+filePath)
+                            contrl.getUploadFilePath(filePath);
+                            contrl.reqUploadFile(page.f_path)
+                            page.f_path = ""
+                            indicator.visible = true;
+                            window.clearFocus()
+                        }
+                    }
+                }
+
+                Keys.onReleased: {
+                    if((event.key === Qt.Key_Back || event.key === Qt.Key_Escape))
+                    {
+                        if(gInputContext.softwareInputPanelVisible) {
+                            window.clearFocus()
+                        }else {
+                            saveMailCheck(true, false)
+                        }
+                        event.accepted = true;
+                        return;
+                    }
+                }
+                CIndicator{
+                    id: indicator
+                    anchors.fill: parent
+                    visible: false
                 }
                 CInputDialog {
                     id: fileName_Dlg
@@ -490,15 +548,7 @@ CPageStackWindow {
                         renameDialog.setText("")
                     }
                 }
-
-                CIndicator{
-                    id: indicator
-                    anchors.fill: parent
-                    visible: false
-                }
-
             }
-
         }
 
         function split1(m) {

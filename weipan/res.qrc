@@ -11,5 +11,6 @@
         <file>res/MyApp.png</file>
         <file>res/folder.png</file>
         <file>res/3document.png</file>
+        <file>res/user_man_circle.png</file>
     </qresource>
 </RCC>

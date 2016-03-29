@@ -1,3 +1,5 @@
+// this page is unused
+
 import QtQuick 2.0
 import com.syberos.basewidgets 2.0
 import Qt.labs.folderlistmodel 1.0
@@ -325,7 +327,6 @@ CPage {
 
             onEmptyFile: {
                 console.log("文件夹为空!");
-                mainListModel.refresh();
 //                gToast.requestToast("文件夹为空!");
             }
 
