@@ -1,5 +1,8 @@
 import QtQuick 2.0
+import QtQuick.Controls 1.2
 import com.syberos.basewidgets 2.0
+import Qt.labs.folderlistmodel 1.0
+import com.syberos.filemanager.filepicker 1.0
 
 CPage {
     id: showPage
@@ -13,14 +16,17 @@ CPage {
     property bool ismuliSelected: true
     property string c_title: ""
     property string c_path: ""
+    property int c_index: 0
 
     onStatusChanged: {
-         console.log("status==="+status);
+        console.log("status==="+status);
 
+        indicator.visible = true;
         if (status == CPageStatus.Show) {
             console.log("[show111page] c_path: ", c_path)
             mainListModel.clear()
             contrl.reqMetaData(c_path);
+            indicator.visible = false;
         }
     }
 
@@ -117,9 +123,10 @@ CPage {
                         var txt1_path = mainListModel.getPath(index)
                         var txt_title1 = mainListModel.getTitle(index)
                         var txt_content = contrl.readFile("/home/user/"+txt_title1)
-                        contrl.getDwnloadPath(txt1_path)
-                        contrl.reqDownLoadFile()
-                        indicator.visible = true
+                        gToast.requestToast("目前还不能打开文件")
+//                        contrl.getDwnloadPath(txt1_path)
+//                        contrl.reqDownloadFile()
+//                        indicator.visible = true
                         // open the file
                         console.log("title===" + txt_title1 + "  content===" + txt_content)
                         pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
@@ -217,16 +224,16 @@ CPage {
         property var listCheckedCount: view.selectedCount
 
         onListCheckedCountChanged: {
-            if(listCheckedCount > 0){
-                toolbar.enabledIndexes([0,2], true)
-            }else{
-                toolbar.enabledIndexes([0,2], false)
-            }
+            //            if(listCheckedCount > 0){
+            //                toolbar.enabledIndexes([0,1,2], true)
+            //            }else{
+            //                toolbar.enabledIndexes([0,1,2], false)
+            //            }
 
             if(listCheckedCount === 1){
-                toolbar.enabledIndexes([1,3], true)
+                toolbar.enabledIndexes([0,1,2], true)
             }else{
-                toolbar.enabledIndexes([1,3], false)
+                toolbar.enabledIndexes([0,1,2], false)
             }
         }
 
@@ -237,10 +244,11 @@ CPage {
             animationVisible: view.editing
             backgroundEnabled: true
 
-            names: [os.i18n.ctr(qsTr("分享")), os.i18n.ctr(qsTr("重命名")), os.i18n.ctr(qsTr("删除")), os.i18n.ctr(qsTr("下载"))]
+            names: [os.i18n.ctr(qsTr("分享")), os.i18n.ctr(qsTr("删除")), os.i18n.ctr(qsTr("下载"))]
 
             onClicked: {
-                var indexList = view.selectedIndexes
+                var indexList = view.selectedIndexes[0]
+                page.c_index = view.selectedIndexes[0]
                 if(index == 0){
                     //                    var pathList = [];
                     //                    var i;
@@ -252,27 +260,24 @@ CPage {
                     //                    shareDialog.open(pathList, CMIMEDialogTool.Share, "")
 
                 }else if(index == 1){
-                    renameDialog.show()
-                    //                    currentpath = view.model.getPath(indexList[0])
-                    //                    modellasttime = view.model.getLastTime(indexList[0])
-                    //                    changeNameDialog.titleText = qsTr("rename save")+rootWindow.transflag
-                    //                    changeNameDialog.origintext = view.model.getName(indexList[0])
-                    //                    changeNameDialog.show()
-                }else if(index == 2){
+
                     console.log("=====my count ============",view.selectedIndexes.length)
-                    rmIndexList = view.selectedIndexes
-                    if(rmIndexList.length == 0){
-                        return
-                    }
                     confirmDeleteDialog.show()
 
-                }else if(index == 3) {
+                }else if(index == 2) {
                     console.log("======download file=============", view.selectedIndexes.length)
-                    var d_path = mainListModel.getPath(indexList)
-                    console.log("d_path = "+ d_path)
-                    contrl.getDwnloadPath(d_path)
-                    contrl.reqDownLoadFile()
-                    indicator.visible = true
+                    var type = mainListModel.getType(indexList)
+                    if(type) {
+                        toolbar.enabledIndexes([2], false);
+                        gToast.requestToast("不能下载文件夹!");
+                    }
+                    else {
+                        var d_path = mainListModel.getPath(indexList)
+                        console.log("d_path = "+ d_path)
+                        contrl.getDwnloadPath(d_path)
+                        contrl.reqDownloadFile()
+                        indicator.visible = true
+                    }
                 }
             }
         }
@@ -282,61 +287,29 @@ CPage {
             visible: false
             titleText: qsTr("delete")
             titleAreaEnabled: true;
-            messageText: !ismuliSelected || rmIndexList.length == 1?
-                             qsTr("Sure to delete the selected file?")
-                           :qsTr("Sure to delete the selected ") + rmIndexList.length + qsTr(" file?")
+            messageText:  "Sure to delete the selected file?"
             onAccepted:  {
-                console.log("RecordList.qml:onAccepted.")
-//                view.editing = false
-//                visible = false
-//                if(!ismuliSelected) {
-//                    mainListModel.remove(currentpath)
-//                    return;
-//                } else {
-//                    console.log("------------historyModel.getPath---------------------",mainListModel.getPath(rmIndexList[0]))
-//                    for(var i = 0; i < rmIndexList.length; i++) {
-//                        var index = rmIndexList[i];
-//                        console.log("rmIndex index = "+ index +" path = " + mainListModel.getPath(rmIndexList[i]))
-//                        mainListModel.remove(index, index)
-//                    }
-//                    //                    indicatorDialog.messageText = os.i18n.ctr(qsTr("Deleting..."))
-//                    //                    indicatorDialog.show()
-//                }
+
+                console.log("RonAccepted.")
+                view.editing = false
+                visible = false
+                var path = mainListModel.getPath(page.c_index);
+                console.log("------------mainListModel.getPath---------------------",mainListModel.getPath(page.c_index))
+                mainListModel.remove(page.c_index, page.c_index)
+                contrl.reqDeleteFile(path)
+            }
+            onRejected: {
+                view.editing = false
             }
         }
 
         Connections{
             target: mainListModel
-            //            onCountChanged:{
-            //                if(mainListModel.count === 0 && listPage.status === CPageStatus.Show){
-            //                    if(!crushDialog.crushing){
-            //                        pageStack.pop()
-            //                    }
-            //                }
-            //            }
-
 
             onDeleteFinished:{
                 console.log("delete finished");
                 indicatorDialog.hide()
             }
-        }
-
-        Connections{
-            target: contrl
-
-            onEmptyFile: {
-                console.log("文件夹为空!");
-                gToast.requestToast("文件夹为空!可新建文件夹，上传文档");
-            }
-
-            onDownloadFinished :{
-                console.log("download finished!")
-                indicator.visible = false
-                gToast.requestToast("下载完成！");
-                view.editing = false
-            }
-
         }
 
         CIndicatorDialog{
@@ -345,54 +318,89 @@ CPage {
 
         Row {
             id: tab_btn
-            spacing: 15
-            height: 110
             anchors.bottom: parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
 
-            CButton {
-                id: upload_btn
-                text: "上传"
-                width: 180
-                height: 100
-                onClicked: {
-                    console.log("upload")
-                    pageStack.push("qrc:///qml/Upload.qml",{c_path: c_path})
-                }
-            }
-            CButton {
+            Button {
                 id: create_btn
                 text: "新建"
-                width: 180
-                height: 100
+                width: 240
+                height: 80
                 onClicked: {
                     console.log("create")
                     fileName_Dlg.show();
                 }
             }
-        }
-        CInputDialog {
-            id: fileName_Dlg
-            placeholderText: "please input folderName..."
-            onAccepted: {
-                var f_name = fileName_Dlg.text()
-                var f_path = c_path;
-                console.log("c_name = " + f_name);
-                //                var c_date = currentDate.toLocaleString();
-                //                console.log("c_date = " + c_date);
-                contrl.createFolder(f_name, f_path);
-                fileName_Dlg.setText("")
+            Button {
+                id: upload_btn
+                text: "上传"
+                width: 240
+                height: 80
+                onClicked: {
+                    console.log("upload")
+                    pageStack.push(filesPickerCom)
+                }
+
+            }
+            Button {
+                id: loadList_btn
+                text: "传输列表"
+                //                font.pixelSize: 30
+                width: 240
+                height: 80
+
+                onClicked: {
+                    pageStack.push("qrc:///qml/LoadList.qml")
+                }
+
             }
         }
 
-        CInputDialog {
-            id: renameDialog
-            titleText: "rename this folder?"
+        InputDialog {
+            id: fileName_Dlg
+            titleText: "新建文件夹"
+            placeholderText: "请输入文件名..."
             onAccepted: {
-                var value = renameDialog.text()
-                mainListModel.rename(value)
-                console.log("rename value === "+value)
-                renameDialog.setText("")
+                var value = fileName_Dlg.text();
+                console.log("accept is result is:" + value);
+
+                if(value === "") {
+                    return;
+                }
+
+                if (folderName === value) {
+                    //inputDialog.close();
+                    return;
+                }
+
+                var f_path = c_path;
+
+                contrl.createFolder(value, f_path);
+
+                fileName_Dlg.setText("");
+            }
+        }
+
+        Component {
+            id: filesPickerCom
+            SyberosFilesPicker{
+                id: filesPicker
+                onOk:{
+                    var size = 0;
+                    var selectedSize = filesPicker.getFileSize()
+                    for(var i = 0; i < selectedSize.length; i++){
+                        size += parseInt(selectedSize[i])
+                    }
+
+                    var filePath = filesPicker.filesPath;
+                    page.filename = filePath;
+                    console.log("filePicker filesPath = "+filePath)
+                    contrl.getUploadFilePath(filePath);
+                    contrl.reqUploadFile(c_path)
+                    //                    pageStack.push("qrc:///qml/LoadList.qml")
+                    //                    indicator.visible = true;
+                    window.clearFocus();
+                }
             }
         }
 

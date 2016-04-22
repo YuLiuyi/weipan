@@ -18,6 +18,7 @@ INCLUDEPATH += $$[QT_INSTALL_HEADERS]/../syberos_application \
 
 QT += gui qml quick
 QT += core gui network
+QT += sql
 
 TARGET = MyApp
 
@@ -40,14 +41,24 @@ SOURCES += src/main.cpp \
     src/publicFun.cpp \
     src/mainListModel.cpp \
     src/filesInfo.cpp \
-    src/thread.cpp
+    src/thread.cpp \
+    src/listmodel.cpp \
+    src/loadInfo.cpp \
+    src/uploadThread.cpp \
+    src/downloadThread.cpp \
+    src/downloadListmodel.cpp
 
 HEADERS += src/MyApp_Workspace.h \
     src/controller.h \
     src/publicFun.h \
     src/mainListModel.h \
     src/filesInfo.h \
-    src/thread.h
+    src/thread.h \
+    src/listmodel.h \
+    src/loadInfo.h \
+    src/uploadThread.h \
+    src/downloadThread.h \
+    src/downloadListmodel.h
 
 # Installation path
 target.path = $$INS_DIR/bin
@@ -66,12 +77,11 @@ INSTALLS += target res meta syber
 QML_FILES = qml/*.qml
 
 OTHER_FILES += $$QML_FILES *.qm \
-    qml/MainPage.qml \
     qml/UserInfo.qml \
-    qml/Upload.qml \
     qml/InputDialog.qml \
     qml/ShowFile.qml \
-    qml/ShowPage.qml
+    qml/ShowPage.qml \
+    qml/LoadList.qml
                
 
 

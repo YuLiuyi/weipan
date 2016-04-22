@@ -9,20 +9,54 @@
 #include <QJsonValue>
 #include <QHttpPart>
 #include <QFileInfo>
+#include <QNetworkRequest>
+#include "publicFun.h"
+
 
 Thread::Thread(QObject *parent):
     QThread(parent)
 {
     stop = false;
 }
-void Thread::setInfo(QByteArray buf)
+
+void Thread::setUrl(QUrl url)
 {
-    mBuf = buf;
+    mUrl = url;
 }
-void Thread::procFiles()
+
+//----------------获取文件夹信息-----------------------
+//获取文件夹信息
+void Thread::reqMetaData(QUrl url)
+{
+    QNetworkRequest request;
+    request.setUrl(QString(url.toEncoded()));
+    mMetaDataReply = mManager->get(request);
+
+    connect(mMetaDataReply, SIGNAL(finished()),this,SLOT(metaDataReplyFinished()));
+//    connect(mMetaDataReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
+}
+
+//metaData读完
+void Thread::metaDataReplyFinished()
+{
+    int ret = mMetaDataReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    qDebug() << Q_FUNC_INFO<<"ret===" << ret;
+    if(ret == 200) {
+        QByteArray getBuf = mMetaDataReply->readAll();
+        qDebug() << Q_FUNC_INFO << "buf = " << getBuf;
+//        m_thread->setInfo(getBuf);
+//        m_thread->start();
+        proMetaData(getBuf);
+        mMetaDataReply->deleteLater();
+    } else {
+        qDebug() << Q_FUNC_INFO<<"error";
+    }
+}
+
+void Thread::proMetaData(const QByteArray &buf)
 {
     QJsonParseError jsonError;//Qt5新类
-    QJsonDocument json = QJsonDocument::fromJson(mBuf, &jsonError);//Qt5新类
+    QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);//Qt5新类
     QString title;
     bool type;
     if(jsonError.error == QJsonParseError::NoError)//Qt5新类
@@ -40,8 +74,8 @@ void Thread::procFiles()
 
                 if(jsonArray.size() == 0) {
                     qDebug() << "==============size==00000000000000======";
-                    mList.clear();
-                    emit procResult(mList);
+                    mInfolist.clear();
+                    emit result(mInfolist);
                     emit emptyFile();
                 } else {
                     foreach (const QJsonValue & value, jsonArray) {
@@ -53,7 +87,7 @@ void Thread::procFiles()
                         qDebug() << "==============is_dir=======" << obj["is_dir"].toBool();
                         type = obj["is_dir"].toBool();
                         qDebug() << "======================type:"<<type;
-                            mList.append(FileInfo(obj["path"].toString(), obj["modified"].toString(),
+                        mInfolist.append(FileInfo(obj["path"].toString(), obj["modified"].toString(),
                                     obj["size"].toString(), title, type));
                     }
                 }
@@ -62,11 +96,11 @@ void Thread::procFiles()
     }
 }
 
-
 void Thread::run()
 {
-    qDebug()<<"=======run======";
-    procFiles();
-    emit procResult(mList);      //把m_list从线程发出去，在主线程进行处理
+    mInfolist.clear();
+    emit result(mInfolist);
+    reqMetaData(mUrl);
+    emit result(mInfolist);
 }
 

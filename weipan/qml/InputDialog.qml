@@ -9,6 +9,7 @@ CInputDialog {
 
     property string folderName: ""
     property string mode: ""
+    property var listModel: mainListModel
 
     property var paths: []
     //property int mode: 0 // 0，只有‘确定’按钮;1，默认‘确定’及取消‘按钮’；
@@ -55,26 +56,31 @@ CInputDialog {
             color:"red"
             font.pixelSize: 20
         }
-     }
+    }
 
     Component.onCompleted: {
     }
 
     onAccepted: {
-        var value = inputDialog.text();
-        console.log("accept is result is:" + value);
-        console.log("mode="+mode);
+//        var value = inputDialog.text();
+//        console.log("accept is result is:" + value);
 
-        if(value === "") {
-            return;
-        }
+//        if(value === "") {
+//            return;
+//        }
 
-        if (folderName === value) {
-            //inputDialog.close();
-            return;
-        }
+//        if (folderName === value) {
+//            //inputDialog.close();
+//            return;
+//        }
 
-        inputDialog.setText("");
+//        var f_path = c_path;
+
+//        contrl.createFolder(value, f_path);
+
+//        inputDialog.setText("");
+
+
     }
 
     Connections{
@@ -92,17 +98,17 @@ CInputDialog {
                 inputDialog.acceptButtonEnabled = false
                 cautionText.text = qsTr("The name is too long.")
             } else if(value.indexOf("\"") !== -1
-                     ||value.indexOf("\“")!== -1 || value.indexOf("\”") !== -1
-                     ||value.indexOf(" ") !== -1 || value.indexOf("　") !== -1
-                     ||value.indexOf("/") !== -1 || value.indexOf("／") !== -1
-                     ||value.indexOf("\\")!== -1 || value.indexOf("＼") !== -1
-                     ||value.indexOf(":") !== -1 || value.indexOf("：") !== -1
-                     ||value.indexOf("*") !== -1 || value.indexOf("＊") !== -1
-                     ||value.indexOf("?") !== -1 || value.indexOf("？") !== -1
-                     ||value.indexOf("<") !== -1 || value.indexOf("＜") !== -1
-                     ||value.indexOf(">") !== -1 || value.indexOf("＞") !== -1
-                     ||value.indexOf("|") !== -1 || value.indexOf("｜") !== -1
-                     ||value.indexOf("。") !== -1) {
+                      ||value.indexOf("\“")!== -1 || value.indexOf("\”") !== -1
+                      ||value.indexOf(" ") !== -1 || value.indexOf("　") !== -1
+                      ||value.indexOf("/") !== -1 || value.indexOf("／") !== -1
+                      ||value.indexOf("\\")!== -1 || value.indexOf("＼") !== -1
+                      ||value.indexOf(":") !== -1 || value.indexOf("：") !== -1
+                      ||value.indexOf("*") !== -1 || value.indexOf("＊") !== -1
+                      ||value.indexOf("?") !== -1 || value.indexOf("？") !== -1
+                      ||value.indexOf("<") !== -1 || value.indexOf("＜") !== -1
+                      ||value.indexOf(">") !== -1 || value.indexOf("＞") !== -1
+                      ||value.indexOf("|") !== -1 || value.indexOf("｜") !== -1
+                      ||value.indexOf("。") !== -1) {
                 inputDialog.acceptButtonEnabled = false
                 //cautionText.text = qsTr("The name cannot include \"\\/：*?<>|.")
                 cautionText.text = qsTr("The name cannot include special character")

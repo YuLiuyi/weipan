@@ -19,7 +19,7 @@ public:
 private:
     QString mDate, mSize, mTitle;
     QUrl mPath;
-    int mType;
+    bool mType;
 };
 
 typedef QList <FileInfo> InfoList;

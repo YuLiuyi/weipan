@@ -1,6 +1,8 @@
 #ifndef THREAD_H
 #define THREAD_H
 #include <QThread>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include "filesInfo.h"
 
 class Thread:public QThread
@@ -8,17 +10,25 @@ class Thread:public QThread
     Q_OBJECT
 public:
     Thread(QObject *parent = 0);
+    bool stop;
     void run();                                 //线程运行
-    void setInfo(QByteArray buf);                 //
-    bool stop;                                  //该线程是否停止
-    void procFiles();//
-    void procFolder();
+    void setUrl(QUrl url);
+    void reqMetaData(QUrl url);
+    void proMetaData(const QByteArray &buf);
+
+
 signals:
-    void procResult(InfoList);
+    void result(InfoList);
     void emptyFile();
+public slots:
+    void metaDataReplyFinished();
+
 
 private:
-    QByteArray            mBuf;
-    InfoList              mList;
+
+    QUrl mUrl;
+    InfoList mInfolist;
+    QNetworkAccessManager *mManager;
+    QNetworkReply *mMetaDataReply;
 };
 #endif // THREAD_H

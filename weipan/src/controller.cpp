@@ -9,27 +9,50 @@
 #include <QFileInfo>
 #include <QIODevice>
 #include <QTextStream>
+#include <QDate>
+#include <QStringList>
+#include <QSqlQuery>
+#include <QDir>
 
 Controller::Controller()
 {
 
-    mAuUrlChangeNum = 0;
     mAuthoriseOk = false;
     mAccessToken = "";
     mUid = "";
     mManager = new QNetworkAccessManager();
-    mFilePath = "";
+    //    mUploadThread = new UploadThread();
+    mUploadFilePath = "";
+    //    connect(&mUploadThread, SIGNAL(uploadReplyFinished(QNetworkReply*)), this ,SLOT(handleUploadReply(QNetworkReply*)));
+}
+
+void Controller::error(QNetworkReply::NetworkError error)
+{
+    emit showError();
+    sendRequest();
+    qDebug() << Q_FUNC_INFO << "error=" << error;
+}
+
+bool Controller::isRequesting()
+{
+    return mIsRequesting;
+}
+
+void Controller::setRequesting(bool b)
+{
+    mIsRequesting = b;
+    emit isRequestingChanged();
 }
 
 //-------------------request处理------------------
 void Controller::sendRequest()
 {
     QString reqTokenUrl = buildReqUrl();
-    inputUrl.setUrl(reqTokenUrl.toLatin1());
+    mInputUrl.setUrl(reqTokenUrl.toLatin1());
     qDebug() << Q_FUNC_INFO << "reqTokenUrl = " << reqTokenUrl;
+    emit showWeb();
 }
 
-//request url
 QString Controller::buildReqUrl()
 {
     //"https://auth.sina.com.cn/oauth2/authorize?client_id=&redirect_uri=https://api.weibo.com/oauth2/default.html&response_type=token"
@@ -54,11 +77,11 @@ QString Controller::buildReqUrl()
 //show web
 QUrl Controller::loadWeb()
 {
-    qDebug() << Q_FUNC_INFO<<" inputUrl = " << inputUrl;
-    return inputUrl;
+    qDebug() << Q_FUNC_INFO<<" mInputUrl = " << mInputUrl;
+    return mInputUrl;
 }
 
-//提取accessToken,usrID
+//提取accessToken
 void Controller::getAccessToken(QString token, QString uid)
 {
     mAccessToken = token;
@@ -68,10 +91,40 @@ void Controller::getAccessToken(QString token, QString uid)
     }
     mUid = uid;
     qDebug() << "uid = " << mUid;
-//    writeCfg();
+    writeCfg();
 }
 
-//
+//写入配置文件
+void Controller::writeCfg()
+{
+    QDir::setCurrent("/home/user");
+    cfgFile.setFileName("weipan.ini");
+    if(NULL != mAccessToken)
+    {
+        QSettings *cfgReader = new QSettings(cfgFile.fileName(), QSettings::IniFormat);
+        cfgReader->setIniCodec("UTF-8");
+        cfgReader->beginGroup("config");
+        cfgReader->setValue("OAuthInfo/oauth_token", mAccessToken);
+        qDebug() <<Q_FUNC_INFO<<__LINE__<< "accessToken = " << mAccessToken;
+        cfgReader->endGroup();
+    }
+}
+//read .ini
+void Controller::readCfg()
+{
+    qDebug()<<Q_FUNC_INFO<<__LINE__<<"read .ini";
+    QDir::setCurrent("/home/user");
+    cfgFile.setFileName("weipan.ini");
+    qDebug()<<Q_FUNC_INFO<<__LINE__<<"read .ini";
+    QSettings *cfgReader = new QSettings(cfgFile.fileName(), QSettings::IniFormat);
+    mAccessToken = cfgReader->value("config/OAuthInfo/oauth_token").toString();
+    qDebug()<<Q_FUNC_INFO<<__LINE__<<"mAccessToken = " << mAccessToken;
+    if(NULL == mAccessToken) {
+        sendRequest();
+    }
+
+}
+
 bool Controller::authoriseOk()
 {
     return mAuthoriseOk;
@@ -89,18 +142,6 @@ int Controller::openFile(QByteArray &buf, const QString &filePath)
     return buf.size();
 }
 
-////写入配置文件
-//void Controller::writeCfg()
-//{
-//    cfgFile.open(QIODevice::WriteOnly);
-//    cfgFile.close();
-//    QSettings *cfgReader = new QSettings(cfgFile.fileName(), QSettings::IniFormat);
-//    cfgReader->setIniCodec("UTF-8");
-//    cfgReader->setValue("OAuthInfo/oauth_token",mAccessTokenInfo.accessToken);
-//    cfgReader->setValue("OAuthInfo/user_id",mAccessTokenInfo.usrID);
-//    cfgReader->setValue("OAuthInfo/usrName","NULL");
-//    cfgReader->setValue("OAuthInfo/uploadNode","NULL");
-//}
 
 QString Controller::readFile(QString path)
 {
@@ -121,56 +162,62 @@ QString Controller::readFile(QString path)
 }
 
 
-//userInfo request
+//------------------userInfo----------------------
 void Controller::getUserInfo()
 {
     QString reqUrl = builtGetUsrInfoReqUrl();
-    inputUrl.setUrl(reqUrl.toLatin1());
+    QUrl mInputUrl;
+    mInputUrl.setUrl(reqUrl.toLatin1());
+
     QNetworkRequest request;
-    request.setUrl(inputUrl);
+    request.setUrl(mInputUrl);
+
     mUsrInfoReply =  mManager->get(request);
+
     connect(mUsrInfoReply, SIGNAL(finished()), this, SLOT(getUserInfoFinished()));
+    connect(mUsrInfoReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
 
 }
 
-//bulit userInfo request url
 QString Controller::builtGetUsrInfoReqUrl()
 {
     //https://api.weipan.cn/2/account/info?access_token=
     QString para;
     QString _reqUrl = GET_USR_INFO_URL;
+
     _reqUrl.append("?");
     _reqUrl.append(ACCESS_TOKEN);
     _reqUrl.append(mAccessToken);
     _reqUrl.append(removeUrlEncode(para));//添加去掉编码的参数
+
     qDebug() << Q_FUNC_INFO << "_reqUrl = " << _reqUrl;
+
     return _reqUrl;
 }
 
-//bulit userInfo request url finished
 void Controller::getUserInfoFinished()
 {
     int ret = mUsrInfoReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if(ret == 200) {
-    QByteArray getBuf = mUsrInfoReply->readAll();
+        QByteArray getBuf = mUsrInfoReply->readAll();
 
-    qDebug() << Q_FUNC_INFO << "buf = " << getBuf;
+        qDebug() << Q_FUNC_INFO << "buf = " << getBuf;
 
-    procUsrInfo(mUsrInfoStru, getBuf);
+        procUsrInfo(mUsrInfoStru, getBuf);
 
-    mUsrInfoReply->deleteLater();
+        mUsrInfoReply->deleteLater();
     } else {
         qDebug() << Q_FUNC_INFO<<"error";
         return;
     }
 }
 
-//process userInfo
 void Controller::procUsrInfo(struUsrInfo &usrInfo, const QByteArray &buf)
 {
     QJsonParseError jsonError;//Qt5新类
     QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);//Qt5新类
+
     if(jsonError.error == QJsonParseError::NoError)//Qt5新类
     {
         if(json.isObject())
@@ -187,6 +234,7 @@ void Controller::procUsrInfo(struUsrInfo &usrInfo, const QByteArray &buf)
 
                 qDebug() << "quota:" << quota.value("quota");
                 usrInfo.quotaTotal = quota.value("quota").toString();
+
                 qDebug() << "consumed:" << quota.value("consumed");
                 usrInfo.quotaUsed = quota.value("consumed").toString();
                 return;
@@ -195,7 +243,6 @@ void Controller::procUsrInfo(struUsrInfo &usrInfo, const QByteArray &buf)
     }
 }
 
-//show userInfo/qml
 QString Controller::showUserInfo(int index)
 {
     switch (index) {
@@ -219,6 +266,7 @@ QString Controller::showUserInfo(int index)
     }
 }
 
+
 //----------------创建文件夹------------------
 void Controller::createFolder(QString folderName, QString fpath)
 {
@@ -226,9 +274,9 @@ void Controller::createFolder(QString folderName, QString fpath)
         return;
     } else {
         QString createFolder = buildCreateFolderUrl();
-
-        inputUrl.setUrl(createFolder.toLatin1());
-        qDebug() << "createFolderUrl = " << inputUrl;
+        QUrl mInputUrl;
+        mInputUrl.setUrl(createFolder.toLatin1());
+        qDebug() << "createFolderUrl = " << mInputUrl;
         qDebug() << "folderName = " << folderName;
 
         QByteArray append("root=sandbox&path="+fpath.toLocal8Bit()+"/"+folderName.toLocal8Bit());
@@ -237,9 +285,10 @@ void Controller::createFolder(QString folderName, QString fpath)
         QNetworkRequest request;
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
         request.setHeader(QNetworkRequest::ContentLengthHeader, QVariant(append.size()).toString());
-        request.setUrl(inputUrl);
+        request.setUrl(mInputUrl);
 
         mCreatFlderReply = mManager->post(request, append);
+        setRequesting(true);
         qDebug() << Q_FUNC_INFO << "mCreatFlderReply = " << mCreatFlderReply;
         connect(mCreatFlderReply, SIGNAL(finished()), this, SLOT(creatflderReplyFinished()));
         connect(mCreatFlderReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
@@ -247,7 +296,6 @@ void Controller::createFolder(QString folderName, QString fpath)
 }
 
 
-//build CreateFolder Url
 QString Controller::buildCreateFolderUrl()
 {
     QString para;
@@ -260,15 +308,16 @@ QString Controller::buildCreateFolderUrl()
     return _createFolderUrl;
 }
 
-//build CreateFolder Url Finished
 void Controller::creatflderReplyFinished()
 {
     int ret = mCreatFlderReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     qDebug() << "ret = " << ret;
+    setRequesting(false);
     if(ret == 200) {
-    QByteArray buf = mCreatFlderReply->readAll();
-    qDebug() << Q_FUNC_INFO << "buf = " << buf;
-    mCreatFlderReply->deleteLater();
+        QByteArray buf = mCreatFlderReply->readAll();
+        qDebug() << Q_FUNC_INFO << "buf = " << buf;
+        procFolder(buf);
+        mCreatFlderReply->deleteLater();
     } else {
         qDebug() << Q_FUNC_INFO<<"error";
         return;
@@ -282,6 +331,7 @@ void Controller::procFolder(const QByteArray &buf)
 
     bool type;
     QString title;
+    QString date;
     if(jsonError.error == QJsonParseError::NoError)//Qt5新类
     {
         if(json.isObject())
@@ -308,10 +358,14 @@ void Controller::procFolder(const QByteArray &buf)
             if(obj.contains("modified"))
             {
                 qDebug() << "======================modified:"<<obj.value("modified");
+                QString s = obj.value("modified").toString();
+                QStringList s1 = s.split("+");
+                date = s1[0];
             }
-            mInfolist.append(FileInfo(obj.value("path").toString(), obj.value("modified").toString(),
-                                      "0", title, type));
+            mInfolist.append(FileInfo(obj.value("path").toString(), date,
+                                      "", title, type));
             emit(result(mInfolist));
+            emit procFolderFinished();
         }
     }
 }
@@ -319,25 +373,24 @@ void Controller::procFolder(const QByteArray &buf)
 
 
 //----------------获取文件夹信息-----------------------
+
 //获取文件夹信息
 void Controller::reqMetaData(QString dataPath)
 {
-//    listModel.clear(mInfolist);
+    //    listModel.clear(mInfolist);
     mInfolist.clear();
     emit(result(mInfolist));
     qDebug()<<Q_FUNC_INFO<<"datapath ========== "<<dataPath;
     QString metaDataUrl = buildMetaDataUrl(dataPath);
-
-    inputUrl.setUrl(QString(metaDataUrl.toUtf8()));
+    QUrl mInputUrl;
+    mInputUrl.setUrl(QString(metaDataUrl.toUtf8()));
     qDebug() << "metaData = " << metaDataUrl.toUtf8();
-    qDebug() << "inpurtUrl = " << inputUrl << " after encoded: " << inputUrl.toEncoded();
+    qDebug() << "inpurtUrl = " << mInputUrl << " after encoded: " << mInputUrl.toEncoded();
 
     QNetworkRequest request;
-    request.setUrl(QString(inputUrl.toEncoded()));
+    request.setUrl(QString(mInputUrl.toEncoded()));
     mMetaDataReply = mManager->get(request);
-
-//    mRequest.setUrl(QString(inputUrl.toEncoded()));
-//    mMetaDataReply = mManager->get(mRequest);
+    setRequesting(true);
     connect(mMetaDataReply, SIGNAL(finished()),this,SLOT(metaDataReplyFinished()));
     connect(mMetaDataReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
 }
@@ -365,15 +418,19 @@ QString Controller::buildMetaDataUrl(QString &dataPath)
 //metaData读完
 void Controller::metaDataReplyFinished()
 {
+    setRequesting(false);
     int ret = mMetaDataReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
     qDebug() << Q_FUNC_INFO<<"ret===" << ret;
+
     if(ret == 200) {
         QByteArray getBuf = mMetaDataReply->readAll();
         qDebug() << Q_FUNC_INFO << "buf = " << getBuf;
-//        m_thread->setInfo(getBuf);
-//        m_thread->start();
+
         proMetaData(getBuf);
+
         mMetaDataReply->deleteLater();
+
     } else {
         qDebug() << Q_FUNC_INFO<<"error";
     }
@@ -381,40 +438,59 @@ void Controller::metaDataReplyFinished()
 
 void Controller::proMetaData(const QByteArray &buf)
 {
-    QJsonParseError jsonError;//Qt5新类
-    QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);//Qt5新类
+    QJsonParseError jsonError;
+    QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);
+
     QString title;
     bool type;
-    if(jsonError.error == QJsonParseError::NoError)//Qt5新类
+    QString date;
+
+    if(jsonError.error == QJsonParseError::NoError)
     {
         if(json.isObject())
         {
-            QJsonObject obj = json.object();//Qt5新类
+            QJsonObject obj = json.object();
             if(obj.contains("contents")) {
 
-                qDebug() << "======================contents:"<<obj.value("contents");
+                qDebug() << "contents:"<<obj.value("contents");
 
                 QJsonArray jsonArray = obj["contents"].toArray();//
 
-                qDebug() << "======================jsonArray:"<<jsonArray.size();
-
                 if(jsonArray.size() == 0) {
-                    qDebug() << "==============size==00000000000000======";
+                    qDebug() <<__LINE__<< "=size=0 ";
+                    emit emptyFile();
+                    qDebug() <<__LINE__<< "empty signal ";
                     mInfolist.clear();
                     emit result(mInfolist);
-                    emit emptyFile();
+                    return;
                 } else {
                     foreach (const QJsonValue & value, jsonArray) {
                         QJsonObject obj = value.toObject();
                         QFileInfo fi(obj["path"].toString());
+
                         title = fi.fileName();
-                        qDebug() << "======================path:"<<obj["path"].toString();
-                        qDebug() << "======================title:"<<title;
-                        qDebug() << "==============is_dir=======" << obj["is_dir"].toBool();
+                        qDebug() <<__LINE__<<"path = "<<obj["path"].toString();
+                        qDebug() <<__LINE__<<"title = "<<title;
+                        qDebug() <<__LINE__<<"is_dir = " << obj["is_dir"].toBool();
                         type = obj["is_dir"].toBool();
-                        qDebug() << "======================type:"<<type;
-                        mInfolist.append(FileInfo(obj["path"].toString(), obj["modified"].toString(),
-                                    obj["size"].toString(), title, type));
+                        qDebug() <<__LINE__<<"type = "<<type;
+
+                        QString s = obj["modified"].toString();
+                        QStringList s1 = s.split("+");
+
+                        date = s1[0];
+
+                        if(type) {
+                            QJsonArray array = obj[title].toArray();
+                            int ArraySize = array.size();
+                            qDebug() <<__LINE__<< "ArraySize = "<<ArraySize;
+
+                            mInfolist.append(FileInfo(obj["path"].toString(), date,
+                                             "", title, type));
+                        } else {
+                            mInfolist.append(FileInfo(obj["path"].toString(), date,
+                                             obj["size"].toString(), title, type));
+                        }
                         emit result(mInfolist);
                     }
                 }
@@ -423,41 +499,64 @@ void Controller::proMetaData(const QByteArray &buf)
     }
 }
 
-void Controller::reqUploadFile(QString toPath)
-{
-    QByteArray data;
-    QString uploadFileUrl = buildUploadFileUrl(toPath);
 
-    inputUrl.setUrl(uploadFileUrl.toUtf8());
-    qDebug()<<Q_FUNC_INFO<<"inputUrl = " << inputUrl;
-    mUploadRequest.setUrl(inputUrl);
-    buildMultiPart(data);//使用multipart方式上传 构造multipart包
-    mUploadFileReply = mManager->put(mUploadRequest,data);//上传
-    connect(mUploadFileReply, SIGNAL(finished()), this, SLOT(upLoadFileReplyFinished()));
+//------------------------------------------上传文件----------------------------------------
 
-}
+////uploadThread
+//void Controller::reqUploadFile(QString toPath)
+//{
+//    qDebug()<<Q_FUNC_INFO<<"toPath = "<< toPath;
+//    mUploadThread.getUploadFilePath(mUploadFilePath, mULFileName);
+//    mUploadThread.getAccessToken(mAccessToken);
+//    qDebug()<<Q_FUNC_INFO;
+//    mUploadThread.getDePath(toPath);
+//    qDebug()<<Q_FUNC_INFO;
+//    mUploadThread.start();
+//}
 
-void Controller::error(QNetworkReply::NetworkError error)
-{
-    qDebug() << Q_FUNC_INFO << "error=" << error;
-}
-void Controller::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
-{
-    qDebug() << Q_FUNC_INFO << "bytesSent=" << bytesSent << "bytesTotal=" << bytesTotal;
-}
+//void Controller::handleUploadReply(QNetworkReply *reply)
+//{
+//    int ret = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+//    qDebug() << Q_FUNC_INFO << "ret = " << ret;
+//    if(ret != 200) {
+//        emit uploadFailed();
+//        return;
+//    } else {
+//        QByteArray buf = reply->readAll();
+//        qDebug() << Q_FUNC_INFO << "getbuf = " << buf;
 
-//构建上传文件的url
-QString Controller::buildUploadFileUrl(QString &toPath)
-{
-    QString para;
-    QString _sendFileUrl = UPLOAD_URL;
-    _sendFileUrl.append( toPath + "/" + mULFileName);  //file save path
-    _sendFileUrl.append("?");
-    _sendFileUrl.append(ACCESS_TOKEN);
-    _sendFileUrl.append(mAccessToken);
-    _sendFileUrl.append(para);//添加无编码的参数
-    return _sendFileUrl;
-}
+//        QJsonParseError jsonError;
+//        QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);
+//        if(jsonError.error == QJsonParseError::NoError)
+//        {
+//            if(json.isObject())
+//            {
+//                QJsonObject obj = json.object();
+//                if(obj.contains("is_dir"))
+//                {
+//                    qDebug() << "======================is_dir:"<<obj.value("is_dir");
+
+//                    if(obj["is_dir"].isObject())
+//                    {
+//                        QJsonObject weatherObj = obj["is_dir"].toObject();
+
+//                        qDebug() << "is_dir:"<<weatherObj.toVariantMap();
+//                        return;
+//                    }
+//                }
+//            }
+//        }
+//        mUploadList.append(LoadInfo(62, mULFileName, 50));
+//        emit uploadResult(mUploadList);
+//        emit(uploadFinished());
+//        reply->deleteLater();
+//    }
+//}
+
+////uploadThread end
+
+
+////upload file in mainThread
 
 //返回随机数 oauth_nonce
 QString Controller::getRandNonce()
@@ -469,17 +568,69 @@ QString Controller::getRandNonce()
 
 void Controller::getUploadFilePath(QString path)
 {
-    mFilePath = path;
-    qDebug() << "mFilePath===" << mFilePath;
-    QFileInfo fi(mFilePath);
+    mUploadFilePath = path;
+    qDebug() << "mFilePath===" << mUploadFilePath;
+    QFileInfo fi(mUploadFilePath);
     mULFileName = fi.fileName();
 }
 
+void Controller::reqUploadFile(QString toPath)
+{
+    QByteArray data;
+    QString uploadFileUrl = buildUploadFileUrl(toPath);
+    QUrl mInputUrl;
+    mInputUrl.setUrl(uploadFileUrl.toUtf8());
+    qDebug()<<Q_FUNC_INFO<<"mInputUrl = " << mInputUrl;
+    QNetworkRequest mUploadRequest;
+    mUploadRequest.setUrl(mInputUrl);
+    buildMultiPart(data, mUploadRequest);//使用multipart方式上传 构造multipart包
+    mUploadFileReply = mManager->put(mUploadRequest,data);//上传
+    connect(mUploadFileReply, SIGNAL(uploadProgress(qint64,qint64)),
+            this, SLOT(uploadProgress(qint64,qint64)));
+    connect(mUploadFileReply, SIGNAL(finished()), this, SLOT(upLoadFileReplyFinished()));
+    connect(mUploadFileReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
+
+}
+
+void Controller::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
+{
+    qDebug() << Q_FUNC_INFO << "bytesSent=" << bytesSent << "bytesTotal=" << bytesTotal;
+
+    if(bytesTotal != 0) {
+        mUploadProgress = bytesSent*100/bytesTotal;
+
+        qDebug() <<__LINE__<<Q_FUNC_INFO << mUploadProgress;
+
+        mUploadList.clear();
+        mUploadList.append(LoadInfo(bytesTotal,mULFileName , mUploadProgress));
+
+    } else {
+        qDebug() <<__LINE__<<Q_FUNC_INFO << mUploadProgress;
+        mUploadProgress = 0;
+    }
+
+    emit uploadResult(mUploadList);
+}
+
+//构建上传文件的url
+QString Controller::buildUploadFileUrl(QString &toPath)
+{
+    QString para;
+    QString _sendFileUrl = UPLOAD_URL;
+    _sendFileUrl.append( toPath + "/" + mULFileName);  //file save path
+    _sendFileUrl.append("?");
+    _sendFileUrl.append(ACCESS_TOKEN);
+    _sendFileUrl.append(mAccessToken);
+    _sendFileUrl.append("&overwrite=false");
+    _sendFileUrl.append(para);//添加无编码的参数
+    return _sendFileUrl;
+}
+
 //构造multipart
-void Controller::buildMultiPart(QByteArray &data)
+void Controller::buildMultiPart(QByteArray &data, QNetworkRequest request)
 {
     QByteArray needToUploadFile;
-    QString localPath = mFilePath;
+    QString localPath = mUploadFilePath;
     qDebug() << Q_FUNC_INFO << "localPath = " << localPath;
     if(openFile(needToUploadFile,localPath)<=0)
     {
@@ -504,10 +655,8 @@ void Controller::buildMultiPart(QByteArray &data)
     data.append(needToUploadFile);
     data.append(endBoundary.toLatin1());
     qDebug() << Q_FUNC_INFO << "data : " << data << "data size :" << data.size() << ",length=" << data.length();
-    mUploadRequest.setHeader(QNetworkRequest::ContentTypeHeader, contentType.toLatin1());
-    mUploadRequest.setHeader(QNetworkRequest::ContentLengthHeader, QVariant(data.size()).toString());
-
-
+    request.setHeader(QNetworkRequest::ContentTypeHeader, contentType.toLatin1());
+    request.setHeader(QNetworkRequest::ContentLengthHeader, QVariant(data.size()).toString());
 }
 
 
@@ -520,13 +669,13 @@ void Controller::upLoadFileReplyFinished()
     QByteArray buf = mUploadFileReply->readAll();
     qDebug() << Q_FUNC_INFO << "getbuf = " << buf;
 
-    QJsonParseError jsonError;//Qt5新类
-    QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);//Qt5新类
-    if(jsonError.error == QJsonParseError::NoError)//Qt5新类
+    QJsonParseError jsonError;
+    QJsonDocument json = QJsonDocument::fromJson(buf, &jsonError);
+    if(jsonError.error == QJsonParseError::NoError)
     {
         if(json.isObject())
         {
-            QJsonObject obj = json.object();//Qt5新类
+            QJsonObject obj = json.object();
             if(obj.contains("is_dir"))
             {
                 qDebug() << "======================is_dir:"<<obj.value("is_dir");
@@ -541,28 +690,53 @@ void Controller::upLoadFileReplyFinished()
             }
         }
     }
-    qDebug()<<"111111111111111111111111111111";
     emit(uploadFinished());
     mUploadFileReply->deleteLater();
 }
 
-//----------------------------------------下载文件
+
+
+//----------------------------------------下载文件--------------------------------------------
+
+////downloadThread
+
+//void Controller::reqDownloadFile()
+//{
+//    mDownloadThread.getToken(mAccessToken);
+//    mDownloadThread.getDownloadPath(mDownloadpath);
+//    qDebug()<< Q_FUNC_INFO << "downloadPath = " << mDownloadpath;
+
+//    mUploadThread.start();
+//}
+
+////downloadThread end
+
 //请求下载文件
 //GET https://api.weipan.cn/2/files/<root>/<path>
-void Controller::reqDownLoadFile()
+void Controller::reqDownloadFile()
 {
 
     QFileInfo fi(mDownloadpath);
 
     qDebug() << Q_FUNC_INFO << "downfile==path=" << mDownloadpath;
 
-    QString file_name = "/home/user/" + fi.fileName();
+    QString path = "/home/user/";
+
+    QString dir_path = "/home/user/weipan/";
+
+    QDir dir(path);
+
+    if(!dir.mkdir("weipan")) {
+        qDebug()<<__LINE__<<"weipan dir has existed";
+    }
+
+    QString file_name = dir_path + fi.fileName();
     qDebug() << "fileName === " << file_name;
 
     QFile file(file_name);
 
     if(file.exists()) {
-        file_name = "/home/user/f_" + fi.fileName();
+        file_name = dir_path + "f_" + fi.fileName();
         qDebug() << "fileName === " << file_name;
     }
 
@@ -579,14 +753,15 @@ void Controller::reqDownLoadFile()
     }
 
     QString downLoadFileUrl = buildDownFileUrl(mDownloadpath);
-    inputUrl.setUrl(downLoadFileUrl.toUtf8());
+    QUrl mInputUrl;
+    mInputUrl.setUrl(downLoadFileUrl.toUtf8());
 
-    qDebug() << Q_FUNC_INFO << "inputUrl===" << inputUrl;
-    mRequest.setUrl(inputUrl);
+    qDebug() << Q_FUNC_INFO << "mInputUrl===" << mInputUrl;
+    mRequest.setUrl(mInputUrl);
     mDownloadFileReply = mManager->get(mRequest);
-    connect(mDownloadFileReply, SIGNAL(readyRead()), this, SLOT(dwnFileRealReadReady()));
-    connect(mDownloadFileReply, SIGNAL(downloadProgress(qint64,qint64)),
-            this, SLOT(downloadProgress(qint64,qint64)));
+    //    connect(mDownloadFileReply, SIGNAL(readyRead()), this, SLOT(dwnFileRealReadReady()));
+    //    connect(mDownloadFileReply, SIGNAL(downloadProgress(qint64,qint64)),
+    //            this, SLOT(downloadProgress(qint64,qint64)));
     connect(mDownloadFileReply, SIGNAL(finished()), this, SLOT(downLoadFileReplyFinished()));
 }
 
@@ -594,6 +769,8 @@ void Controller::getDwnloadPath(QString path)
 {
     mDownloadpath = path;
     qDebug()<< Q_FUNC_INFO << "====path==="<< mDownloadpath;
+    QFileInfo fi(mDownloadpath);
+    mDLFileName = fi.fileName();
 }
 
 //构造 下载文件的url
@@ -631,6 +808,7 @@ void Controller::downLoadFileReplyFinished()
                 connect(mDownloadFileReply, SIGNAL(downloadProgress(qint64,qint64)),
                         this, SLOT(downloadProgress(qint64,qint64)));
                 connect(mDownloadFileReply, SIGNAL(finished()), this, SLOT(downLoadFileReplyFinished()));
+                connect(mDownloadFileReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
                 return;
             }
         }
@@ -649,6 +827,20 @@ void Controller::downLoadFileReplyFinished()
 void Controller::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
     qDebug() << Q_FUNC_INFO << "bytesSent=" << bytesReceived << "bytesTotal=" << bytesTotal;
+    if(bytesTotal != 0) {
+        mDownloadProgress = bytesReceived*100/bytesTotal;
+
+        qDebug() <<__LINE__<<Q_FUNC_INFO << mDownloadProgress;
+
+        mDownloadList.clear();
+        mDownloadList.append(LoadInfo(bytesTotal, mDLFileName , mDownloadProgress));
+
+    } else {
+        qDebug() <<__LINE__<<Q_FUNC_INFO << mDownloadProgress;
+        mDownloadProgress = 0;
+    }
+
+    emit downloadResult(mDownloadList);
 }
 
 //重定向后 获得下载文件反馈
@@ -664,7 +856,63 @@ void Controller::dwnFileRealReadReady()
         QByteArray buf = mDownloadFileReply->readAll();
         qDebug() << Q_FUNC_INFO << "buf = " << buf;
 
-        dwnFile->write(mDownloadFileReply->readAll());
+        dwnFile->write(buf);
+    }
+}
+
+
+
+//--------------------------------------delete file---------------------------------------------------------------------
+void Controller::reqDeleteFile(QString path)//
+{
+
+    QString deleteFolder = buildDeleteFolderUrl();
+
+    QUrl mInputUrl;
+    mInputUrl.setUrl(deleteFolder.toLatin1());
+    qDebug() << "createFolderUrl = " << mInputUrl;
+    qDebug() << "path = " << path;
+
+    QByteArray append("root=sandbox&path="+ path.toLocal8Bit());
+    qDebug() << Q_FUNC_INFO << "append = " << append;
+
+    QNetworkRequest request;
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+    request.setHeader(QNetworkRequest::ContentLengthHeader, QVariant(append.size()).toString());
+    request.setUrl(mInputUrl);
+
+    mDeleteFlderReply = mManager->post(request, append);
+    qDebug() << Q_FUNC_INFO << "mCreatFlderReply = " << mDeleteFlderReply;
+    connect(mDeleteFlderReply, SIGNAL(finished()), this, SLOT(deleteflderReplyFinished()));
+    connect(mDeleteFlderReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(error(QNetworkReply::NetworkError)));
+
+}
+
+
+
+QString Controller::buildDeleteFolderUrl()
+{
+    QString para;
+    QString deleteFolderUrl(DELETE_FILE_URL);
+    QString _deleteFolderUrl = deleteFolderUrl;
+    _deleteFolderUrl.append("?");
+    _deleteFolderUrl.append(ACCESS_TOKEN);
+    _deleteFolderUrl.append(mAccessToken);
+    _deleteFolderUrl.append(removeUrlEncode(para));//添加去掉编码的参数
+    return _deleteFolderUrl;
+}
+
+void Controller::deleteflderReplyFinished()
+{
+    int ret = mDeleteFlderReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    qDebug() << "ret = " << ret;
+    if(ret == 200) {
+        QByteArray buf = mDeleteFlderReply->readAll();
+        qDebug() << Q_FUNC_INFO << "buf = " << buf;
+        mDeleteFlderReply->deleteLater();
+    } else {
+        qDebug() << Q_FUNC_INFO<<"error";
+        return;
     }
 }
 

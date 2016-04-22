@@ -1,5 +1,6 @@
 #include "mainListModel.h"
 #include <QFileInfo>
+#include <QModelIndex>
 #include <QDir>
 
 MainListModel::MainListModel(QObject *parent) : QAbstractListModel(parent)
@@ -103,6 +104,7 @@ void MainListModel::clear()
     endResetModel();
 }
 
+
 void MainListModel::remove(int first, int last)
 {
     if ((first < 0) && (first >= mInfolist.count()))//是否越界
@@ -115,21 +117,11 @@ void MainListModel::remove(int first, int last)
         first ^= last;
     }
     beginRemoveRows(QModelIndex(), first, last);
-    qDebug()<< "first=" << first;
+    qDebug()<< __LINE__ <<"first=" << first;
     while (first <= last) {
         qDebug() << "first=" << first;
         mInfolist.removeAt(first);
-//        mPath = mInfolist.at(first).getPath().toString();
-//        QFile fi(mPath);
-//        bool type = mInfolist.at(first).getType();
-//        qDebug() << Q_FUNC_INFO << "mPath===" << mPath;
-//        if (!type)
-//        {
-//            QDir dir(mPath);
-//            dir.rmdir(fi.fileName());
-//        }
-//        QFile::remove(fi.fileName());
-        qDebug() << "first=" << first;
+        qDebug() <<  __LINE__ <<"first=" << first;
         last --;
     }
     emit deleteFinished();
@@ -144,6 +136,13 @@ void MainListModel::rename(QString name)
     beginResetModel();
     mInfolist.at(mCurrentIndex).getTitle().replace(mCurrentIndex, name);
     qDebug()<<"renamed listName ===="<<name;
+    endResetModel();
+}
+
+void MainListModel::refresh()
+{
+    beginResetModel();
+    qDebug()<<Q_FUNC_INFO<<__LINE__;
     endResetModel();
 }
 

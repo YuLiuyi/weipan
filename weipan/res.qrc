@@ -1,11 +1,11 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
-        <file>qml/MainPage.qml</file>
-        <file>qml/Upload.qml</file>
         <file>qml/UserInfo.qml</file>
         <file>qml/InputDialog.qml</file>
         <file>qml/ShowPage.qml</file>
+        <file>qml/LoadList.qml</file>
+        <file>qml/ShowFile.qml</file>
     </qresource>
     <qresource prefix="/images">
         <file>res/MyApp.png</file>

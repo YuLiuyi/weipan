@@ -43,6 +43,7 @@ enum EnumUsrInfoIndex   //用户信息
 #define CREATE_FOLDER             "https://api.weipan.cn/2/fileops/create_folder"
 #define UPLOAD_URL                "http://upload-vdisk.sina.com.cn/2/files_put/sandbox/"
 #define DOWNLOAD_FILE_URL         "https://api.weipan.cn/2/files/sandbox/"
+#define DELETE_FILE_URL           "https://api.weipan.cn/2/fileops/delete"
 
 #define CLIENT_ID                 "client_id="
 #define REDIRECT_URI              "redirect_uri=https://api.weibo.com/oauth2/default.html"

@@ -24,7 +24,9 @@ public:
     Q_INVOKABLE QString getTitle(int index) const;
     Q_INVOKABLE bool getType(int index) const;
     Q_INVOKABLE void remove(int first, int last);				//删除
+
     Q_INVOKABLE void rename(QString name);
+    Q_INVOKABLE void refresh();
     Q_INVOKABLE void clear();
 
     void setCurrentIndex(const int & i);
@@ -37,10 +39,11 @@ public:
         typeRole,
     };
 
-private slots:
+public slots:
     void handleList(InfoList filelist);
 
 signals:
+    void refreshFinished();
     void currentIndexChanged();
     void deleteFinished();
 

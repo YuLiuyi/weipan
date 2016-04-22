@@ -11,7 +11,10 @@
 #include <QDebug>
 #include "publicFun.h"
 #include "filesInfo.h"
+#include "loadInfo.h"
 #include "mainListModel.h"
+#include "downloadThread.h"
+#include "uploadThread.h"
 
 typedef struct _usrInfoJson
 {
@@ -22,79 +25,95 @@ typedef struct _usrInfoJson
     QString gender;
 }struUsrInfo;
 
+typedef struct _tokenInfoJson
+{
+    QString auToken;
+}struTkInfo;
+
 class Controller : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool isRequesting READ isRequesting NOTIFY isRequestingChanged)
 
 public:
     explicit Controller();
 
-    //发送request请求
-    Q_INVOKABLE void sendRequest();
 
-    //构建 request url
-    QString buildReqUrl();
+    void sendRequest();                                 //发送request请求
+    QString buildReqUrl();                                          //构建 request url
 
-    //qml需要的url
-    Q_INVOKABLE QUrl loadWeb();
 
-    //获取accessToken
-    Q_INVOKABLE void getAccessToken(QString token, QString uid);
+    Q_INVOKABLE QUrl loadWeb();         //
+
+    Q_INVOKABLE void getAccessToken(QString token, QString uid);    //获取accessToken
+
+    void writeCfg();                                                //token写入配置文件
+    Q_INVOKABLE void readCfg();
 
     Q_INVOKABLE bool authoriseOk();
 
-    int openFile(QByteArray &buf,const QString &filePath);
-
-    //写入配置文件
-    void writeCfg();
+    int openFile(QByteArray &buf,const QString &filePath);          //open file
 
     Q_INVOKABLE QString readFile(QString path);
 
-    Q_INVOKABLE void getUserInfo();
-    //构建 UserInfo request url
+    //userInfo
+    Q_INVOKABLE void getUserInfo();                                 //构建 UserInfo request url
     QString builtGetUsrInfoReqUrl();
-
-    // 存储用户信息到结构体中
-    void procUsrInfo(struUsrInfo &usrInfo, const QByteArray &buf);
-
+    void procUsrInfo(struUsrInfo &usrInfo, const QByteArray &buf);  // 存储用户信息到结构体中
     Q_INVOKABLE QString showUserInfo(int index);
 
-    //获取文件夹信息
-    Q_INVOKABLE void reqMetaData(QString dataPath);
 
-    //构造获取文件夹信息url
-    QString buildMetaDataUrl(QString &dataPath);
-
-    void proMetaData(const QByteArray &buf);
-
-    Q_INVOKABLE void reqUploadFile(QString toPath);
-
-    void buildMultiPart(QByteArray &data);
-
-    QString getRandNonce();
-
-    QString buildUploadFileUrl(QString &toPath);
-
-    Q_INVOKABLE void getUploadFilePath(QString path);
-
-    Q_INVOKABLE void reqDownLoadFile();
-
-    Q_INVOKABLE void getDwnloadPath(QString path);
-
-    QString buildDownFileUrl(QString &fromPath);
-
+    //creat folder
     Q_INVOKABLE void createFolder(QString folderName, QString path);
-
     QString buildCreateFolderUrl();
-
     void procFolder(const QByteArray &buf);
 
 
+    //folderInfo
+    Q_INVOKABLE void reqMetaData(QString dataPath);                 //获取文件夹信息
+    QString buildMetaDataUrl(QString &dataPath);                    //构造获取文件夹信息url
+    void proMetaData(const QByteArray &buf);
+
+    //upload file
+    Q_INVOKABLE void reqUploadFile(QString toPath);
+    void buildMultiPart(QByteArray &data, QNetworkRequest request);
+    QString getRandNonce();
+    QString buildUploadFileUrl(QString &toPath);
+    Q_INVOKABLE void getUploadFilePath(QString path);
+
+
+    //download file
+    Q_INVOKABLE void reqDownloadFile();
+    Q_INVOKABLE void getDwnloadPath(QString path);
+    QString buildDownFileUrl(QString &fromPath);
+
+
+    //delete file/folder
+    Q_INVOKABLE void reqDeleteFile(QString path);
+    QString buildDeleteFolderUrl();
+
+
 signals:
+
+    void showError();
+    void showWeb();
     void result(InfoList);
+
+    void getDataFinished();
+
     void uploadFinished();
+    void uploadFailed();
+    void uploadResult(UploadInfoList);
+
     void downloadFinished();
+    void downloadResult(DownloadInfoList);
+
     void emptyFile();
+
+    void procFolderFinished();
+
+    void isRequestingChanged();
+
 
 public slots:
     void getUserInfoFinished();
@@ -103,6 +122,7 @@ public slots:
 
     void upLoadFileReplyFinished();
     void uploadProgress(qint64 bytesSent, qint64 bytesTotal);
+//    void handleUploadReply(QNetworkReply *reply);
 
     void error(QNetworkReply::NetworkError error);
 
@@ -111,33 +131,59 @@ public slots:
     void downLoadFileReplyFinished();
 
     void creatflderReplyFinished();
+    void deleteflderReplyFinished();
+
+    bool isRequesting();
+
+    void setRequesting(bool);
 
 private:
 
-    QUrl                  inputUrl;
-    QNetworkRequest       mRequest;
-    QNetworkRequest       mUploadRequest;
-    QNetworkReply         *mCreatFlderReply;
-    QNetworkReply         *mUsrInfoReply;
-    QNetworkReply         *mMetaDataReply;
-    QNetworkReply         *mUploadLocateReply;
-    QNetworkReply         *mUploadFileReply;
-    QNetworkReply         *mDownloadFileReply;
-    QNetworkReply         *mDwnFileRealReply;
-    QNetworkAccessManager *mManager;
-    QFile                 cfgFile;
-    QString               mFilePath;
-    QString               mULFileName;
-    int                   mAuUrlChangeNum;
-    bool                  mAuthoriseOk;
-    struUsrInfo           mUsrInfoStru;
-    QByteArray            mDwnFileBuf;
-    QFile                 *dwnFile;
     QString               mAccessToken;
     QString               mUid;
+    bool                  mAuthoriseOk;
+
+
+    QUrl                  mInputUrl;
+    QNetworkAccessManager *mManager;
+
+    struTkInfo            mAuTokenInfo;
+
+    struUsrInfo           mUsrInfoStru;
+    QNetworkReply         *mUsrInfoReply;
+
+    QNetworkReply         *mMetaDataReply;
+
+    QNetworkRequest       mRequest;
+
+    QNetworkReply         *mUploadFileReply;
+    QString               mULFileName;
+    UploadInfoList        mUploadList;
+    int                   mUploadProgress;
+    QString               mUploadFilePath;
+    UploadThread          mUploadThread;
+
+    QNetworkReply         *mDownloadFileReply;
+    QNetworkReply         *mDwnFileRealReply;
+    QByteArray            mDwnFileBuf;
+    QString               mDLFileName;
+    DownloadInfoList      mDownloadList;
+    int                   mDownloadProgress;
     QString               mDownloadpath;
+    QFile                 *dwnFile;
+    DownloadThread        mDownloadThread;
+
+    QNetworkReply         *mCreatFlderReply;
+    QNetworkReply         *mDeleteFlderReply;
+
+    QFile                 cfgFile;
+
     InfoList              mInfolist;
+
     MainListModel         listModel;
+
+    bool mIsRequesting;
+
 };
 
 
