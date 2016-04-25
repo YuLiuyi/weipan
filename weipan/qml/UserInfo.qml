@@ -9,6 +9,8 @@ CPage {
     property string gender: ""
     property string quota: ""
     property string consumed: ""
+    property int  allSize: 0
+    property int usedSize: 0
 
     Component.onCompleted: {
         userInfo_pg.id = contrl.showUserInfo(0)
@@ -16,7 +18,21 @@ CPage {
         userInfo_pg.gender = contrl.showUserInfo(2)
         userInfo_pg.quota = contrl.showUserInfo(3)
         userInfo_pg.consumed = contrl.showUserInfo(4)
+        userInfo_pg.allSize = parseInt(userInfo_pg.quota, 10)
+        userInfo_pg.usedSize = parseInt(userInfo_pg.consumed, 10)
     }
+
+    function formatSize(fileSizeInBytes) {
+        var i = -1;
+        var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+        do {
+            fileSizeInBytes = fileSizeInBytes / 1024;
+            i++;
+        } while (fileSizeInBytes > 1024);
+
+        return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+    }
+
 
     contentAreaItem: Item {
         Rectangle {
@@ -63,7 +79,7 @@ CPage {
                     anchors.bottom: parent.bottom
                     width: parent.width
                     height: 2
-                    color: "#a29696"
+                    color: gUiConst.getValue("CL1")
                 }
             }
             Rectangle {
@@ -80,7 +96,7 @@ CPage {
                     anchors.bottom: parent.bottom
                     width: parent.width
                     height: 2
-                    color: "#a29696"
+                    color: gUiConst.getValue("CL1")
                 }
             }
             Rectangle {
@@ -97,7 +113,7 @@ CPage {
                     anchors.bottom: parent.bottom
                     width: parent.width
                     height: 2
-                    color: "#a29696"
+                    color: gUiConst.getValue("CL1")
                 }
 
             }
@@ -109,14 +125,14 @@ CPage {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     font.pixelSize: 30
-                    text: "总容量 : "+quota
+                    text: "总容量 : "+formatSize(allSize)
                 }
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width
                     height: 2
-                    color: "#a29696"
-                }
+                    color: gUiConst.getValue("CL1")                }
+
             }
             Rectangle {
                 height: 120
@@ -126,13 +142,13 @@ CPage {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     font.pixelSize: 30
-                    text: "已用容量 : "+consumed
+                    text: "已用容量 : "+formatSize(usedSize)
                 }
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width
                     height: 2
-                    color: "#a29696"
+                    color: gUiConst.getValue("CL1")
                 }
             }
         }

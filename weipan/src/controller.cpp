@@ -28,7 +28,7 @@ Controller::Controller()
 
 void Controller::error(QNetworkReply::NetworkError error)
 {
-    emit showError();
+    emit showError(error);
     sendRequest();
     qDebug() << Q_FUNC_INFO << "error=" << error;
 }

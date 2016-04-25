@@ -95,7 +95,7 @@ public:
 
 signals:
 
-    void showError();
+    void showError(QNetworkReply::NetworkError error);
     void showWeb();
     void result(InfoList);
 

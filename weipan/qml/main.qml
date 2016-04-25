@@ -1,6 +1,7 @@
 import QtQuick 2.0
 import com.syberos.basewidgets 2.0
 import QtQuick.Controls 1.2
+import QtQuick.Controls.Styles 1.2
 import Qt.labs.folderlistmodel 1.0
 import QtWebKit 3.0
 import QtWebKit.experimental 1.0
@@ -44,7 +45,7 @@ CPageStackWindow {
 
         Component.onCompleted: {
 
-//            indicator.visible = true;
+            //            indicator.visible = true;
             contrl.readCfg();
             contrl.getUserInfo();
             contrl.reqMetaData("");
@@ -63,7 +64,11 @@ CPageStackWindow {
             target: contrl
 
             onShowError :{
-                gToast.requestToast("error!请重新登录!")
+                if(error == 3) {
+                    gToast.requestToast("授权过期，请重新登录！")
+                } else {
+                    gToast.requestToast("服务器开小差啦!请重新登录!")
+                }
             }
 
             onShowWeb :{
@@ -149,8 +154,9 @@ CPageStackWindow {
                         anchors.left: parent.left
                         anchors.leftMargin: 40
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 50
-                        height: 50
+                        width: 45
+                        height: 45
+                        opacity: 0.3
                         source: "qrc:/images/res/user_man_circle.png"
                         MouseArea {
                             anchors.fill: parent
@@ -170,7 +176,7 @@ CPageStackWindow {
 
                         font.pixelSize: 40
                         font.bold: true
-                        text: "首页"
+                        text: "微盘"
                     }
                 }
 
@@ -253,11 +259,11 @@ CPageStackWindow {
                                 var txt_title1 = mainListModel.getTitle(index)
                                 var txt_content = contrl.readFile("/home/user/"+txt_title1)
                                 gToast.requestToast("目前还不能打开文件")
-//                                contrl.getDwnloadPath(txt1_path)
-//                                contrl.reqDownloadFile()
+                                //                                contrl.getDwnloadPath(txt1_path)
+                                //                                contrl.reqDownloadFile()
                                 // open the file
-//                                console.log("title===" + txt_title1 + "  content===" + txt_content)
-//                                pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
+                                //                                console.log("title===" + txt_title1 + "  content===" + txt_content)
+                                //                                pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
 
                             }
                         }
@@ -385,14 +391,11 @@ CPageStackWindow {
                         var indexList = view.selectedIndexes[0]
                         page.c_index = view.selectedIndexes[0]
                         if(index == 0){
-                            //                    var pathList = [];
-                            //                    var i;
-                            //                    for (i = 0; i < indexList.length; i++) {
-                            //                        pathList.push(historyModel.getPath(indexList[i]))
-                            //                    }
+                            var path = mainListModel.getPath(indexList)
+                            gToast.requestToast("暂不支持分享!");
 
-                            //                    //view.editing = false;
-                            //                    shareDialog.open(pathList, CMIMEDialogTool.Share, "")
+                            //view.editing = false;
+                            //                            shareDialog.open("file://"+path, CMIMEDialogTool.Share, "")
 
                         }else if(index == 1){
 
@@ -417,12 +420,16 @@ CPageStackWindow {
                     }
                 }
 
+                CMIMEDialog {
+                    id: shareDialog
+                }
+
                 CDialog {
                     id: confirmDeleteDialog
                     visible: false
-                    titleText: qsTr("delete")
+                    titleText: qsTr("删除")
                     titleAreaEnabled: true;
-                    messageText:  "Sure to delete the selected file?"
+                    messageText:  mainListModel.getType(page.c_index)?"确定删除选定的文件夹?":"确定删除选定的文件?"
 
                     onAccepted:  {
                         console.log("RonAccepted.")
@@ -452,21 +459,47 @@ CPageStackWindow {
 
                     Button {
                         id: create_btn
-                        text: "新建"
+                        //                        text: "新建"
                         width: 240
                         height: 80
+                        style: ButtonStyle {
+                            label: Text {
+                                renderType: Text.NativeRendering
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                font.family: "Helvetica"
+                                font.pixelSize: 30
+                                color: "black"
+                                text: "新建"
+                            }
+                        }
                         onClicked: {
                             console.log("create")
+                            view.editing = false;
                             fileName_Dlg.show();
                         }
                     }
+
+
                     Button {
                         id: upload_btn
-                        text: "上传"
+                        //                        text: "上传"
                         width: 240
                         height: 80
+                        style: ButtonStyle {
+                            label: Text {
+                                renderType: Text.NativeRendering
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                font.family: "Helvetica"
+                                font.pixelSize: 30
+                                color: "black"
+                                text: "上传"
+                            }
+                        }
                         onClicked: {
                             console.log("upload")
+                            view.editing = false;
                             pageStack.push(filesPickerCom)                       }
 
                     }
@@ -474,8 +507,20 @@ CPageStackWindow {
                         id: loadList_btn
                         width: 240
                         height: 80
-                        text: "传输列表"
+
+                        style: ButtonStyle {
+                            label: Text {
+                                renderType: Text.NativeRendering
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                font.family: "Helvetica"
+                                font.pixelSize: 30
+                                color: "black"
+                                text: "传输列表"
+                            }
+                        }
                         onClicked: {
+                            view.editing = false;
                             pageStack.push("qrc:///qml/LoadList.qml")
                         }
                     }

@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.2
+import QtQuick.Controls.Styles 1.2
 import com.syberos.basewidgets 2.0
 import Qt.labs.folderlistmodel 1.0
 import com.syberos.filemanager.filepicker 1.0
@@ -129,7 +130,7 @@ CPage {
 //                        indicator.visible = true
                         // open the file
                         console.log("title===" + txt_title1 + "  content===" + txt_content)
-                        pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
+//                        pageStack.push("qrc:///qml/ShowFile.qml",{title: txt_title1,text: txt_content})
 
                     }
                 }
@@ -250,14 +251,11 @@ CPage {
                 var indexList = view.selectedIndexes[0]
                 page.c_index = view.selectedIndexes[0]
                 if(index == 0){
-                    //                    var pathList = [];
-                    //                    var i;
-                    //                    for (i = 0; i < indexList.length; i++) {
-                    //                        pathList.push(historyModel.getPath(indexList[i]))
-                    //                    }
+                    var path = mainListModel.getPath(indexList)
 
-                    //                    //view.editing = false;
-                    //                    shareDialog.open(pathList, CMIMEDialogTool.Share, "")
+                    gToast.requestToast("暂不支持分享!")
+                    //view.editing = false;
+//                    shareDialog.open("file://"+path, CMIMEDialogTool.Share, "")
 
                 }else if(index == 1){
 
@@ -276,18 +274,23 @@ CPage {
                         console.log("d_path = "+ d_path)
                         contrl.getDwnloadPath(d_path)
                         contrl.reqDownloadFile()
-                        indicator.visible = true
+                        view.editing = false
+//                        indicator.visible = true
                     }
                 }
             }
         }
 
+        CMIMEDialog {
+            id: shareDialog
+        }
+
         CDialog {
             id: confirmDeleteDialog
             visible: false
-            titleText: qsTr("delete")
+            titleText: qsTr("删除")
             titleAreaEnabled: true;
-            messageText:  "Sure to delete the selected file?"
+            messageText:  mainListModel.getType(page.c_index)?"确定删除选定的文件夹?":"确定删除选定的文件?"
             onAccepted:  {
 
                 console.log("RonAccepted.")
@@ -323,36 +326,70 @@ CPage {
 
             Button {
                 id: create_btn
-                text: "新建"
+//                        text: "新建"
                 width: 240
                 height: 80
+                style: ButtonStyle {
+                  label: Text {
+                    renderType: Text.NativeRendering
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    font.family: "Helvetica"
+                    font.pixelSize: 30
+                    color: "black"
+                    text: "新建"
+                  }
+                }
                 onClicked: {
                     console.log("create")
+                    view.editing = false;
                     fileName_Dlg.show();
                 }
             }
+
+
             Button {
                 id: upload_btn
-                text: "上传"
+//                        text: "上传"
                 width: 240
                 height: 80
+                style: ButtonStyle {
+                  label: Text {
+                    renderType: Text.NativeRendering
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    font.family: "Helvetica"
+                    font.pixelSize: 30
+                    color: "black"
+                    text: "上传"
+                  }
+                }
                 onClicked: {
                     console.log("upload")
-                    pageStack.push(filesPickerCom)
-                }
+                    view.editing = false;
+                    pageStack.push(filesPickerCom)                       }
 
             }
             Button {
                 id: loadList_btn
-                text: "传输列表"
-                //                font.pixelSize: 30
                 width: 240
                 height: 80
 
+                style: ButtonStyle {
+                  label: Text {
+                    renderType: Text.NativeRendering
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    font.family: "Helvetica"
+                    font.pixelSize: 30
+                    color: "black"
+                    text: "传输列表"
+                  }
+                }
                 onClicked: {
+                    view.editing = false;
                     pageStack.push("qrc:///qml/LoadList.qml")
                 }
-
             }
         }
 
